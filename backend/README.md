@@ -25,9 +25,11 @@ Make sure these are installed on your laptop before starting:
 
 | Tool | Version | Download |
 |------|---------|----------|
-| Python | 3.11+ | https://python.org/downloads |
+| Python | 3.11, 3.12, or 3.13 | https://python.org/downloads |
 | `uv` (package manager) | latest | `pip install uv` |
 | Git | any | https://git-scm.com |
+
+> **Python version:** 3.11 is recommended (matches the dev environment). 3.12 and 3.13 also work. **3.10 or older will not work.**
 
 > **Why `uv`?** It's a fast Python package manager that replaces `pip` + `venv`. It reads `pyproject.toml` and installs everything automatically.
 
