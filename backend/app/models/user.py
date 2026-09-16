@@ -44,6 +44,10 @@ class User(SQLModel, table=True):
     department: Optional[str] = Field(default=None, max_length=200)
     jurisdiction: Optional[str] = Field(default=None, max_length=300)  # area/district
 
+    # ─── Location (base GPS for staff — used for nearest-doctor assignment) ──────
+    latitude: Optional[float] = Field(default=None)
+    longitude: Optional[float] = Field(default=None)
+
     # ─── Metadata ─────────────────────────────────────────────────────────────
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

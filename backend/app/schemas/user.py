@@ -41,6 +41,8 @@ class StaffCreate(SQLModel):
     employee_id: Optional[str] = None
     department: Optional[str] = None
     jurisdiction: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     @model_validator(mode="after")
     def at_least_one_contact(self) -> "StaffCreate":
@@ -72,6 +74,8 @@ class UserPublic(SQLModel):
     employee_id: Optional[str] = None
     department: Optional[str] = None
     jurisdiction: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -92,4 +96,6 @@ class UserUpdate(SQLModel):
     number_of_animals: Optional[int] = None
     department: Optional[str] = None
     jurisdiction: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     is_active: Optional[bool] = None
