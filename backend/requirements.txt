@@ -1,0 +1,14 @@
+# Runtime dependencies for Vercel's pip-based build.
+# Keep in sync with pyproject.toml.
+# Omit dev-only packages (pytest, ruff, httpx).
+alembic>=1.20.0
+argon2-cffi>=25.1.0
+bcrypt>=4
+email-validator>=2.3.0
+fastapi>=0.141.1
+passlib[bcrypt]>=1.7.4
+psycopg[binary]>=3.2.0
+pydantic-settings>=2.15.0
+python-jose[cryptography]>=3.5.0
+sqlmodel>=0.0.42
+uvicorn[standard]>=0.53.0

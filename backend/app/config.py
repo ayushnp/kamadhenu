@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # ─── App ──────────────────────────────────────────────────────────────────
     APP_NAME: str = "Kamadhenu"
     VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
 
 settings = Settings()  # type: ignore[call-arg]
