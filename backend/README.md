@@ -39,7 +39,7 @@ Make sure these are installed on your laptop before starting:
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-org>/kamadhenu.git
+git clone https://github.com/ayushnp/kamadhenu.git
 
 # Go into the backend folder
 cd kamadhenu/backend
