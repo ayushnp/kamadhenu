@@ -5,9 +5,14 @@ from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
-    """Accepts either phone or email + password."""
+    """Accepts phone, email, or employee ID + password.
 
-    identifier: str  # phone number OR email
+    - Farmers log in with phone or email.
+    - Inspectors / Doctors / Authority staff log in with their employee ID,
+      phone, or email — whichever was registered.
+    """
+
+    identifier: str  # phone number, email, OR employee ID
     password: str
 
 

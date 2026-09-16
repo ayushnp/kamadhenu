@@ -50,11 +50,21 @@ def create_staff(payload: StaffCreate, session: Session) -> User:
 
 
 def authenticate_user(payload: LoginRequest, session: Session) -> TokenResponse:
-    """Validate credentials and return a signed JWT token."""
+    """Validate credentials and return a signed JWT token.
+
+    The identifier can be:
+    - Phone number (all roles)
+    - Email address (all roles)
+    - Employee ID (Inspector / Doctor / Authority only)
+    """
     identifier = payload.identifier.strip()
 
     statement = select(User).where(
-        or_(User.phone == identifier, User.email == identifier)
+        or_(
+            User.phone == identifier,
+            User.email == identifier,
+            User.employee_id == identifier,  # staff login via government employee ID
+        )
     )
     user = session.exec(statement).first()
 
