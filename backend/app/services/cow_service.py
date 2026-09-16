@@ -1,4 +1,4 @@
-"""Cow management service."""
+"""Bovine animal management service (cattle and buffalo)."""
 
 import uuid
 from datetime import datetime, timezone
@@ -7,40 +7,40 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session, or_, select
 
-from app.models.cow import Cow
-from app.models.cow_health import CowHealthRecord
+from app.models.cow import Bovine
+from app.models.cow_health import BovineHealthRecord
 from app.models.user import User
 from app.models.vaccination import Vaccination
-from app.schemas.cow import CowCreate, CowUpdate, CowWithHistory
-from app.schemas.cow_health import CowHealthRecordCreate, CowHealthRecordRead
+from app.schemas.cow import BovineCreate, BovineUpdate, BovineWithHistory
+from app.schemas.cow_health import BovineHealthRecordCreate, BovineHealthRecordRead
 from app.schemas.vaccination import VaccinationCreate, VaccinationRead
 
 
-# ─── Cow CRUD ─────────────────────────────────────────────────────────────────
+# ─── Bovine CRUD ──────────────────────────────────────────────────────────────
 
-def create_cow(payload: CowCreate, farmer: User, session: Session) -> Cow:
+def create_bovine(payload: BovineCreate, farmer: User, session: Session) -> Bovine:
     _assert_unique_identifiers(payload.pashu_aadhar, payload.barcode, session)
-    cow = Cow(**payload.model_dump(), farmer_id=farmer.id)
-    session.add(cow)
+    bovine = Bovine(**payload.model_dump(), farmer_id=farmer.id)
+    session.add(bovine)
     session.commit()
-    session.refresh(cow)
-    return cow
+    session.refresh(bovine)
+    return bovine
 
 
-def get_cow(cow_id: uuid.UUID, session: Session) -> Cow:
-    cow = session.get(Cow, cow_id)
-    if not cow or not cow.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cow not found")
-    return cow
+def get_bovine(bovine_id: uuid.UUID, session: Session) -> Bovine:
+    bovine = session.get(Bovine, bovine_id)
+    if not bovine or not bovine.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bovine animal not found")
+    return bovine
 
 
-def lookup_cow(
+def lookup_bovine(
     session: Session,
     barcode: Optional[str] = None,
     pashu_aadhar: Optional[str] = None,
     tag_number: Optional[str] = None,
-) -> Cow:
-    """Find a cow by barcode, Pashu Aadhar, or ear tag number."""
+) -> Bovine:
+    """Find a bovine animal by barcode, Pashu Aadhar, or ear tag number."""
     if not any([barcode, pashu_aadhar, tag_number]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -48,51 +48,51 @@ def lookup_cow(
         )
     filters = []
     if barcode:
-        filters.append(Cow.barcode == barcode)
+        filters.append(Bovine.barcode == barcode)
     if pashu_aadhar:
-        filters.append(Cow.pashu_aadhar == pashu_aadhar)
+        filters.append(Bovine.pashu_aadhar == pashu_aadhar)
     if tag_number:
-        filters.append(Cow.tag_number == tag_number)
+        filters.append(Bovine.tag_number == tag_number)
 
-    cow = session.exec(select(Cow).where(or_(*filters))).first()
-    if not cow or not cow.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cow not found")
-    return cow
+    bovine = session.exec(select(Bovine).where(or_(*filters))).first()
+    if not bovine or not bovine.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bovine animal not found")
+    return bovine
 
 
-def list_cows(farmer_id: uuid.UUID, session: Session) -> list[Cow]:
+def list_bovines(farmer_id: uuid.UUID, session: Session) -> list[Bovine]:
     return list(
         session.exec(
-            select(Cow).where(Cow.farmer_id == farmer_id, Cow.is_active == True)  # noqa: E712
+            select(Bovine).where(Bovine.farmer_id == farmer_id, Bovine.is_active == True)  # noqa: E712
         ).all()
     )
 
 
-def update_cow(cow: Cow, payload: CowUpdate, session: Session) -> Cow:
+def update_bovine(bovine: Bovine, payload: BovineUpdate, session: Session) -> Bovine:
     data = payload.model_dump(exclude_none=True)
     for field, value in data.items():
-        setattr(cow, field, value)
-    cow.updated_at = datetime.now(timezone.utc)
-    session.add(cow)
+        setattr(bovine, field, value)
+    bovine.updated_at = datetime.now(timezone.utc)
+    session.add(bovine)
     session.commit()
-    session.refresh(cow)
-    return cow
+    session.refresh(bovine)
+    return bovine
 
 
-def get_cow_with_history(cow: Cow, session: Session) -> CowWithHistory:
+def get_bovine_with_history(bovine: Bovine, session: Session) -> BovineWithHistory:
     health_records = list(
         session.exec(
-            select(CowHealthRecord).where(CowHealthRecord.cow_id == cow.id)
+            select(BovineHealthRecord).where(BovineHealthRecord.cow_id == bovine.id)
         ).all()
     )
     vaccinations = list(
         session.exec(
-            select(Vaccination).where(Vaccination.cow_id == cow.id)
+            select(Vaccination).where(Vaccination.cow_id == bovine.id)
         ).all()
     )
-    return CowWithHistory(
-        **cow.model_dump(),
-        health_records=[CowHealthRecordRead.model_validate(r) for r in health_records],
+    return BovineWithHistory(
+        **bovine.model_dump(),
+        health_records=[BovineHealthRecordRead.model_validate(r) for r in health_records],
         vaccinations=[VaccinationRead.model_validate(v) for v in vaccinations],
     )
 
@@ -100,14 +100,14 @@ def get_cow_with_history(cow: Cow, session: Session) -> CowWithHistory:
 # ─── Health records ───────────────────────────────────────────────────────────
 
 def add_health_record(
-    cow: Cow,
-    payload: CowHealthRecordCreate,
+    bovine: Bovine,
+    payload: BovineHealthRecordCreate,
     recorded_by: uuid.UUID,
     session: Session,
-) -> CowHealthRecord:
-    record = CowHealthRecord(
+) -> BovineHealthRecord:
+    record = BovineHealthRecord(
         **payload.model_dump(),
-        cow_id=cow.id,
+        cow_id=bovine.id,
         recorded_by=recorded_by,
     )
     session.add(record)
@@ -116,10 +116,10 @@ def add_health_record(
     return record
 
 
-def list_health_records(cow_id: uuid.UUID, session: Session) -> list[CowHealthRecord]:
+def list_health_records(bovine_id: uuid.UUID, session: Session) -> list[BovineHealthRecord]:
     return list(
         session.exec(
-            select(CowHealthRecord).where(CowHealthRecord.cow_id == cow_id)
+            select(BovineHealthRecord).where(BovineHealthRecord.cow_id == bovine_id)
         ).all()
     )
 
@@ -127,14 +127,14 @@ def list_health_records(cow_id: uuid.UUID, session: Session) -> list[CowHealthRe
 # ─── Vaccinations ─────────────────────────────────────────────────────────────
 
 def add_vaccination(
-    cow: Cow,
+    bovine: Bovine,
     payload: VaccinationCreate,
     recorded_by: uuid.UUID,
     session: Session,
 ) -> Vaccination:
     vax = Vaccination(
         **payload.model_dump(),
-        cow_id=cow.id,
+        cow_id=bovine.id,
         recorded_by=recorded_by,
     )
     session.add(vax)
@@ -143,10 +143,10 @@ def add_vaccination(
     return vax
 
 
-def list_vaccinations(cow_id: uuid.UUID, session: Session) -> list[Vaccination]:
+def list_vaccinations(bovine_id: uuid.UUID, session: Session) -> list[Vaccination]:
     return list(
         session.exec(
-            select(Vaccination).where(Vaccination.cow_id == cow_id)
+            select(Vaccination).where(Vaccination.cow_id == bovine_id)
         ).all()
     )
 
@@ -160,7 +160,7 @@ def _assert_unique_identifiers(
 ) -> None:
     if pashu_aadhar:
         existing = session.exec(
-            select(Cow).where(Cow.pashu_aadhar == pashu_aadhar)
+            select(Bovine).where(Bovine.pashu_aadhar == pashu_aadhar)
         ).first()
         if existing:
             raise HTTPException(
@@ -168,7 +168,7 @@ def _assert_unique_identifiers(
                 detail=f"Pashu Aadhar '{pashu_aadhar}' is already registered.",
             )
     if barcode:
-        existing = session.exec(select(Cow).where(Cow.barcode == barcode)).first()
+        existing = session.exec(select(Bovine).where(Bovine.barcode == barcode)).first()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

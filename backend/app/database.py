@@ -8,15 +8,25 @@ from app.config import settings
 # pool_pre_ping tests the connection before use (handles stale connections).
 # pool_recycle rotates connections every 5 minutes to avoid Neon's idle timeout.
 # pool_size / max_overflow are kept small since Neon's free tier has connection limits.
-engine = create_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_pre_ping=True,
-    pool_recycle=300,   # recycle connections after 5 min
-    pool_size=5,
-    max_overflow=10,
-    connect_args={"sslmode": "require"},
-)
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+if _is_sqlite:
+    # SQLite (used in tests) does not support pool_size, max_overflow, or sslmode.
+    engine = create_engine(
+        settings.DATABASE_URL,
+        echo=settings.DEBUG,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        settings.DATABASE_URL,
+        echo=settings.DEBUG,
+        pool_pre_ping=True,
+        pool_recycle=300,   # recycle connections after 5 min
+        pool_size=5,
+        max_overflow=10,
+        connect_args={"sslmode": "require"},
+    )
 
 
 def create_db_and_tables() -> None:

@@ -1,4 +1,4 @@
-"""Cow profile routes."""
+"""Bovine animal profile routes (cattle and buffalo)."""
 
 import uuid
 from typing import Annotated, Optional
@@ -7,17 +7,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import CurrentUser, SessionDep, require_role
 from app.models.user import User, UserRole
-from app.schemas.cow import CowCreate, CowRead, CowUpdate, CowWithHistory
+from app.schemas.cow import BovineCreate, BovineRead, BovineUpdate, BovineWithHistory
 from app.services.cow_service import (
-    create_cow,
-    get_cow,
-    get_cow_with_history,
-    list_cows,
-    lookup_cow,
-    update_cow,
+    create_bovine,
+    get_bovine,
+    get_bovine_with_history,
+    list_bovines,
+    lookup_bovine,
+    update_bovine,
 )
 
-router = APIRouter(prefix="/cows", tags=["Cows"])
+router = APIRouter(prefix="/cows", tags=["Bovine Animals"])
 
 FarmerOnly = Annotated[User, Depends(require_role(UserRole.farmer))]
 StaffOrAbove = Annotated[
@@ -28,32 +28,32 @@ StaffOrAbove = Annotated[
 
 @router.post(
     "/",
-    response_model=CowRead,
+    response_model=BovineRead,
     status_code=201,
-    summary="[Farmer] Register a cow",
+    summary="[Farmer] Register a bovine animal (cattle or buffalo)",
 )
-def add_cow(payload: CowCreate, farmer: FarmerOnly, session: SessionDep) -> CowRead:
-    cow = create_cow(payload, farmer, session)
-    return CowRead.model_validate(cow)
+def add_bovine(payload: BovineCreate, farmer: FarmerOnly, session: SessionDep) -> BovineRead:
+    bovine = create_bovine(payload, farmer, session)
+    return BovineRead.model_validate(bovine)
 
 
 @router.get(
     "/",
-    response_model=list[CowRead],
+    response_model=list[BovineRead],
     summary="[Farmer] List own herd",
 )
-def my_herd(current_user: CurrentUser, session: SessionDep) -> list[CowRead]:
+def my_herd(current_user: CurrentUser, session: SessionDep) -> list[BovineRead]:
     # Farmers see own herd; staff can supply farmer_id via /lookup or /farmer/{id} routes
     if current_user.role != UserRole.farmer:
         return []
-    cows = list_cows(current_user.id, session)
-    return [CowRead.model_validate(c) for c in cows]
+    bovines = list_bovines(current_user.id, session)
+    return [BovineRead.model_validate(b) for b in bovines]
 
 
 @router.get(
     "/lookup",
-    response_model=CowWithHistory,
-    summary="Lookup cow by barcode / Pashu Aadhar / tag (all authenticated roles)",
+    response_model=BovineWithHistory,
+    summary="Lookup bovine animal by barcode / Pashu Aadhar / tag (all authenticated roles)",
 )
 def lookup(
     current_user: CurrentUser,
@@ -61,57 +61,57 @@ def lookup(
     barcode: Optional[str] = Query(default=None),
     pashu_aadhar: Optional[str] = Query(default=None),
     tag_number: Optional[str] = Query(default=None),
-) -> CowWithHistory:
-    cow = lookup_cow(session, barcode=barcode, pashu_aadhar=pashu_aadhar, tag_number=tag_number)
-    return get_cow_with_history(cow, session)
+) -> BovineWithHistory:
+    bovine = lookup_bovine(session, barcode=barcode, pashu_aadhar=pashu_aadhar, tag_number=tag_number)
+    return get_bovine_with_history(bovine, session)
 
 
 @router.get(
     "/farmer/{farmer_id}",
-    response_model=list[CowRead],
-    summary="[Staff+] List cows for a given farmer",
+    response_model=list[BovineRead],
+    summary="[Staff+] List bovine animals for a given farmer",
 )
 def herd_by_farmer(
     farmer_id: uuid.UUID,
     _caller: StaffOrAbove,
     session: SessionDep,
-) -> list[CowRead]:
-    cows = list_cows(farmer_id, session)
-    return [CowRead.model_validate(c) for c in cows]
+) -> list[BovineRead]:
+    bovines = list_bovines(farmer_id, session)
+    return [BovineRead.model_validate(b) for b in bovines]
 
 
 @router.get(
     "/{cow_id}",
-    response_model=CowWithHistory,
-    summary="Get cow profile with full history",
+    response_model=BovineWithHistory,
+    summary="Get bovine animal profile with full history",
 )
-def get_cow_detail(
+def get_bovine_detail(
     cow_id: uuid.UUID,
     current_user: CurrentUser,
     session: SessionDep,
-) -> CowWithHistory:
-    cow = get_cow(cow_id, session)
+) -> BovineWithHistory:
+    bovine = get_bovine(cow_id, session)
 
-    # Farmers can only view their own cows
-    if str(current_user.role) == UserRole.farmer and str(cow.farmer_id) != str(current_user.id):
+    # Farmers can only view their own animals
+    if str(current_user.role) == UserRole.farmer and str(bovine.farmer_id) != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    return get_cow_with_history(cow, session)
+    return get_bovine_with_history(bovine, session)
 
 
 @router.patch(
     "/{cow_id}",
-    response_model=CowRead,
-    summary="[Farmer] Update cow profile",
+    response_model=BovineRead,
+    summary="[Farmer] Update bovine animal profile",
 )
-def patch_cow(
+def patch_bovine(
     cow_id: uuid.UUID,
-    payload: CowUpdate,
+    payload: BovineUpdate,
     farmer: FarmerOnly,
     session: SessionDep,
-) -> CowRead:
-    cow = get_cow(cow_id, session)
-    if cow.farmer_id != farmer.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your cow")
-    cow = update_cow(cow, payload, session)
-    return CowRead.model_validate(cow)
+) -> BovineRead:
+    bovine = get_bovine(cow_id, session)
+    if bovine.farmer_id != farmer.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your animal")
+    bovine = update_bovine(bovine, payload, session)
+    return BovineRead.model_validate(bovine)

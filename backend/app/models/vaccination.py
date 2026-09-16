@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel
 
 
 class Vaccination(SQLModel, table=True):
-    """Vaccination record for a cow."""
+    """Vaccination record for a bovine animal (cattle or buffalo)."""
 
     __tablename__ = "vaccinations"
 

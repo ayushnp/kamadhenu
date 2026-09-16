@@ -1,4 +1,4 @@
-"""Tests for cow profile endpoints."""
+"""Tests for bovine animal profile endpoints (cattle and buffalo)."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,7 +21,7 @@ def _register_and_login(client: TestClient, phone: str) -> str:
     return resp.json()["access_token"]
 
 
-COW_PAYLOAD = {
+BOVINE_PAYLOAD = {
     "pashu_aadhar": "123456789012",
     "barcode": "BAR-001",
     "name": "Ganga",
@@ -39,7 +39,7 @@ def test_farmer_can_add_cow(client: TestClient):
     token = _register_and_login(client, "8100000001")
     response = client.post(
         "/api/v1/cows/",
-        json=COW_PAYLOAD,
+        json=BOVINE_PAYLOAD,
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
@@ -48,16 +48,38 @@ def test_farmer_can_add_cow(client: TestClient):
     assert data["pashu_aadhar"] == "123456789012"
 
 
+def test_farmer_can_add_buffalo(client: TestClient):
+    """Ensure buffaloes (species='buffalo') can be registered — multi-species support."""
+    token = _register_and_login(client, "8100000011")
+    response = client.post(
+        "/api/v1/cows/",
+        json={
+            **BOVINE_PAYLOAD,
+            "pashu_aadhar": "900000000001",
+            "barcode": "BAR-BUF-001",
+            "name": "Meera",
+            "breed": "Murrah",
+            "species": "buffalo",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["species"] == "buffalo"
+    assert data["breed"] == "Murrah"
+    assert data["name"] == "Meera"
+
+
 def test_duplicate_barcode_rejected(client: TestClient):
     token = _register_and_login(client, "8100000002")
     client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "111111111111", "barcode": "BAR-DUP"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "111111111111", "barcode": "BAR-DUP"},
         headers={"Authorization": f"Bearer {token}"},
     )
     response = client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "222222222222", "barcode": "BAR-DUP"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "222222222222", "barcode": "BAR-DUP"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 409
@@ -67,7 +89,7 @@ def test_lookup_by_barcode(client: TestClient):
     token = _register_and_login(client, "8100000003")
     client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "333333333333", "barcode": "BAR-LOOKUP"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "333333333333", "barcode": "BAR-LOOKUP"},
         headers={"Authorization": f"Bearer {token}"},
     )
     response = client.get(
@@ -86,12 +108,12 @@ def test_list_my_herd(client: TestClient):
     token = _register_and_login(client, "8100000004")
     client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "444444444444", "barcode": "BAR-HERD1"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "444444444444", "barcode": "BAR-HERD1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "555555555555", "barcode": "BAR-HERD2"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "555555555555", "barcode": "BAR-HERD2"},
         headers={"Authorization": f"Bearer {token}"},
     )
     response = client.get("/api/v1/cows/", headers={"Authorization": f"Bearer {token}"})
@@ -101,14 +123,14 @@ def test_list_my_herd(client: TestClient):
 
 def test_add_health_record(client: TestClient):
     token = _register_and_login(client, "8100000005")
-    cow_resp = client.post(
+    bovine_resp = client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "666666666666", "barcode": "BAR-HEALTH"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "666666666666", "barcode": "BAR-HEALTH"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    cow_id = cow_resp.json()["id"]
+    bovine_id = bovine_resp.json()["id"]
     response = client.post(
-        f"/api/v1/cows/{cow_id}/health/",
+        f"/api/v1/cows/{bovine_id}/health/",
         json={
             "disease_name": "Mastitis",
             "diagnosed_date": "2025-01-15",
@@ -123,14 +145,14 @@ def test_add_health_record(client: TestClient):
 
 def test_add_vaccination(client: TestClient):
     token = _register_and_login(client, "8100000006")
-    cow_resp = client.post(
+    bovine_resp = client.post(
         "/api/v1/cows/",
-        json={**COW_PAYLOAD, "pashu_aadhar": "777777777777", "barcode": "BAR-VAX"},
+        json={**BOVINE_PAYLOAD, "pashu_aadhar": "777777777777", "barcode": "BAR-VAX"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    cow_id = cow_resp.json()["id"]
+    bovine_id = bovine_resp.json()["id"]
     response = client.post(
-        f"/api/v1/cows/{cow_id}/vaccinations/",
+        f"/api/v1/cows/{bovine_id}/vaccinations/",
         json={
             "vaccine_name": "FMD Vaccine",
             "disease_covered": "Foot and Mouth Disease",

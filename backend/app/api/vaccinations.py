@@ -1,4 +1,4 @@
-"""Vaccination record routes."""
+"""Vaccination record routes for bovine animals."""
 
 import uuid
 
@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from app.core.deps import CurrentUser, SessionDep
 from app.models.user import UserRole
 from app.schemas.vaccination import VaccinationCreate, VaccinationRead
-from app.services.cow_service import add_vaccination, get_cow, list_vaccinations
+from app.services.cow_service import add_vaccination, get_bovine, list_vaccinations
 
 router = APIRouter(prefix="/cows/{cow_id}/vaccinations", tags=["Vaccinations"])
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/cows/{cow_id}/vaccinations", tags=["Vaccinations"])
     "/",
     response_model=VaccinationRead,
     status_code=201,
-    summary="Add vaccination record for a cow",
+    summary="Add vaccination record for a bovine animal",
 )
 def add_vax(
     cow_id: str,
@@ -24,29 +24,29 @@ def add_vax(
     current_user: CurrentUser,
     session: SessionDep,
 ) -> VaccinationRead:
-    cow = get_cow(uuid.UUID(cow_id), session)
+    bovine = get_bovine(uuid.UUID(cow_id), session)
 
-    if current_user.role == UserRole.farmer and cow.farmer_id != current_user.id:
+    if current_user.role == UserRole.farmer and bovine.farmer_id != current_user.id:
         from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    vax = add_vaccination(cow, payload, current_user.id, session)
+    vax = add_vaccination(bovine, payload, current_user.id, session)
     return VaccinationRead.model_validate(vax)
 
 
 @router.get(
     "/",
     response_model=list[VaccinationRead],
-    summary="List all vaccination records for a cow",
+    summary="List all vaccination records for a bovine animal",
 )
 def get_vax(
     cow_id: str,
     current_user: CurrentUser,
     session: SessionDep,
 ) -> list[VaccinationRead]:
-    cow = get_cow(uuid.UUID(cow_id), session)
+    bovine = get_bovine(uuid.UUID(cow_id), session)
 
-    if current_user.role == UserRole.farmer and cow.farmer_id != current_user.id:
+    if current_user.role == UserRole.farmer and bovine.farmer_id != current_user.id:
         from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 

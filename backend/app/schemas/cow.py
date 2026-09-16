@@ -7,13 +7,13 @@ from sqlmodel import SQLModel
 
 # ─── Create ───────────────────────────────────────────────────────────────────
 
-class CowCreate(SQLModel):
+class BovineCreate(SQLModel):
     pashu_aadhar: Optional[str] = None
     barcode: Optional[str] = None
     tag_number: Optional[str] = None
     name: Optional[str] = None
     breed: Optional[str] = None
-    species: str = "cattle"
+    species: str = "cattle"  # "cattle" | "buffalo"
     age_years: Optional[float] = None
     calf_number: Optional[int] = None
     lactation_number: Optional[int] = None
@@ -23,7 +23,7 @@ class CowCreate(SQLModel):
 
 # ─── Read ─────────────────────────────────────────────────────────────────────
 
-class CowRead(SQLModel):
+class BovineRead(SQLModel):
     id: uuid.UUID
     farmer_id: uuid.UUID
     pashu_aadhar: Optional[str] = None
@@ -44,13 +44,13 @@ class CowRead(SQLModel):
 
 # ─── Update ───────────────────────────────────────────────────────────────────
 
-class CowUpdate(SQLModel):
+class BovineUpdate(SQLModel):
     pashu_aadhar: Optional[str] = None
     barcode: Optional[str] = None
     tag_number: Optional[str] = None
     name: Optional[str] = None
     breed: Optional[str] = None
-    species: Optional[str] = None
+    species: Optional[str] = None  # "cattle" | "buffalo"
     age_years: Optional[float] = None
     calf_number: Optional[int] = None
     lactation_number: Optional[int] = None
@@ -59,12 +59,12 @@ class CowUpdate(SQLModel):
     is_active: Optional[bool] = None
 
 
-# ─── Nested read (cow + related records) ──────────────────────────────────────
+# ─── Nested read (bovine + related records) ───────────────────────────────────
 
-from app.schemas.cow_health import CowHealthRecordRead  # noqa: E402
+from app.schemas.cow_health import BovineHealthRecordRead  # noqa: E402
 from app.schemas.vaccination import VaccinationRead  # noqa: E402
 
 
-class CowWithHistory(CowRead):
-    health_records: list[CowHealthRecordRead] = []
+class BovineWithHistory(BovineRead):
+    health_records: list[BovineHealthRecordRead] = []
     vaccinations: list[VaccinationRead] = []

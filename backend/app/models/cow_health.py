@@ -5,10 +5,10 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 
-class CowHealthRecord(SQLModel, table=True):
-    """Historical disease / health event record for a cow."""
+class BovineHealthRecord(SQLModel, table=True):
+    """Historical disease / health event record for a bovine animal (cattle or buffalo)."""
 
-    __tablename__ = "cow_health_records"
+    __tablename__ = "cow_health_records"  # kept for DB backward compatibility
 
     id: uuid.UUID = Field(
         default_factory=uuid.uuid4,
@@ -28,3 +28,4 @@ class CowHealthRecord(SQLModel, table=True):
     )  # doctor/inspector who logged it
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+

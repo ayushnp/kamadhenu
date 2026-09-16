@@ -5,7 +5,7 @@ from typing import Optional
 from sqlmodel import SQLModel
 
 
-class CowHealthRecordCreate(SQLModel):
+class BovineHealthRecordCreate(SQLModel):
     disease_name: str
     diagnosed_date: Optional[date] = None
     resolved_date: Optional[date] = None
@@ -14,7 +14,7 @@ class CowHealthRecordCreate(SQLModel):
     is_comorbidity: bool = False
 
 
-class CowHealthRecordRead(SQLModel):
+class BovineHealthRecordRead(SQLModel):
     id: uuid.UUID
     cow_id: uuid.UUID
     disease_name: str
