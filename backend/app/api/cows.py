@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import CurrentUser, SessionDep, require_role
 from app.models.user import User, UserRole
@@ -72,11 +72,11 @@ def lookup(
     summary="[Staff+] List cows for a given farmer",
 )
 def herd_by_farmer(
-    farmer_id: str,
+    farmer_id: uuid.UUID,
     _caller: StaffOrAbove,
     session: SessionDep,
 ) -> list[CowRead]:
-    cows = list_cows(uuid.UUID(farmer_id), session)
+    cows = list_cows(farmer_id, session)
     return [CowRead.model_validate(c) for c in cows]
 
 
@@ -86,15 +86,14 @@ def herd_by_farmer(
     summary="Get cow profile with full history",
 )
 def get_cow_detail(
-    cow_id: str,
+    cow_id: uuid.UUID,
     current_user: CurrentUser,
     session: SessionDep,
 ) -> CowWithHistory:
-    cow = get_cow(uuid.UUID(cow_id), session)
+    cow = get_cow(cow_id, session)
 
     # Farmers can only view their own cows
     if str(current_user.role) == UserRole.farmer and str(cow.farmer_id) != str(current_user.id):
-        from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return get_cow_with_history(cow, session)
@@ -106,14 +105,13 @@ def get_cow_detail(
     summary="[Farmer] Update cow profile",
 )
 def patch_cow(
-    cow_id: str,
+    cow_id: uuid.UUID,
     payload: CowUpdate,
     farmer: FarmerOnly,
     session: SessionDep,
 ) -> CowRead:
-    cow = get_cow(uuid.UUID(cow_id), session)
+    cow = get_cow(cow_id, session)
     if cow.farmer_id != farmer.id:
-        from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your cow")
     cow = update_cow(cow, payload, session)
     return CowRead.model_validate(cow)
