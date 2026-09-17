@@ -25,7 +25,7 @@ function Gate({ splashActive }: { splashActive?: boolean }) {
   useEffect(() => {
     if (!ready) return;
     const inAuth = segments[0] === '(auth)';
-    if (!user && !inAuth) router.replace('/(auth)/login');
+    if (!user && !inAuth) router.replace('/(auth)/landing');
     if (user && inAuth) router.replace('/(tabs)');
   }, [user, ready, segments]);
 
