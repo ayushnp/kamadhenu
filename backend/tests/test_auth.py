@@ -84,3 +84,47 @@ def test_get_me(client: TestClient):
     assert me_resp.status_code == 200
     assert me_resp.json()["phone"] == "9000000003"
     assert me_resp.json()["role"] == "farmer"
+
+
+def test_staff_login_with_employee_id(client: TestClient, session):
+    """Inspector / Doctor / Authority can log in using their government employee ID."""
+    from app.core.security import hash_password
+    from app.models.user import User, UserRole
+
+    # Seed an authority user directly in the DB (bypasses role restriction in /auth/register)
+    authority = User(
+        name="Authority Admin",
+        phone="9000000099",
+        hashed_password=hash_password("adminpass123"),
+        role=UserRole.authority,
+    )
+    session.add(authority)
+    session.commit()
+
+    # Log in as authority
+    authority_token = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "9000000099", "password": "adminpass123"},
+    ).json()["access_token"]
+
+    # Authority creates an inspector with an employee_id
+    resp = client.post(
+        "/api/v1/users/staff",
+        json={
+            "name": "Inspector Suresh",
+            "role": "inspector",
+            "phone": "9000000088",
+            "password": "inspectorpass123",
+            "employee_id": "INS-2024-001",
+        },
+        headers={"Authorization": f"Bearer {authority_token}"},
+    )
+    assert resp.status_code == 201
+
+    # Inspector logs in using their employee ID (not phone, not email)
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "INS-2024-001", "password": "inspectorpass123"},
+    )
+    assert response.status_code == 200
+    assert "access_token" in response.json()

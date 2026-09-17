@@ -1,5 +1,6 @@
 """SQLModel table models — re-exported for Alembic autogenerate."""
 
+from app.models.complaint import Complaint, ComplaintPriority, ComplaintStatus
 from app.models.cow import Bovine
 from app.models.cow_health import BovineHealthRecord
 from app.models.user import User, UserRole
@@ -11,4 +12,7 @@ __all__ = [
     "Bovine",
     "BovineHealthRecord",
     "Vaccination",
+    "Complaint",
+    "ComplaintStatus",
+    "ComplaintPriority",
 ]
