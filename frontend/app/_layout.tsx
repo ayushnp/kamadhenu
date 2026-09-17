@@ -6,7 +6,7 @@ import { useFonts } from 'expo-font';
 import { Baloo2_600SemiBold, Baloo2_700Bold } from '@expo-google-fonts/baloo-2';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import CowSplash from '../src/components/CowSplash';
+import VideoSplash from '../src/components/VideoSplash';
 import { TransitionOverlay } from '../src/components/CowLoader';
 import { AuthProvider, useAuth } from '../src/lib/auth';
 import { colors } from '../src/theme';
@@ -63,7 +63,7 @@ export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
 
   if (!fontsLoaded) return null;
-  if (!introDone) return <CowSplash onDone={() => setIntroDone(true)} />;
+  if (!introDone) return <VideoSplash onDone={() => setIntroDone(true)} />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
