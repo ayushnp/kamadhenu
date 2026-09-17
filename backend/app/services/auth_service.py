@@ -31,7 +31,7 @@ def register_farmer(payload: UserCreate, session: Session) -> User:
 
 def create_staff(payload: StaffCreate, session: Session) -> User:
     """Create inspector / doctor / authority accounts (authority-only action)."""
-    _assert_unique_contact(payload.phone, payload.email, session)
+    _assert_unique_contact(payload.phone, payload.email, session, employee_id=payload.employee_id)
 
     user = User(
         name=payload.name,
@@ -85,22 +85,14 @@ def authenticate_user(payload: LoginRequest, session: Session) -> TokenResponse:
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
 
-def _assert_unique_contact(
-    phone: str | None,
-    email: str | None,
-    session: Session,
-) -> None:
+def _assert_unique_contact(phone, email, session, employee_id=None):
+    conditions = []
     if phone:
-        existing = session.exec(select(User).where(User.phone == phone)).first()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Phone number '{phone}' is already registered.",
-            )
+        conditions.append(User.phone == phone)
     if email:
-        existing = session.exec(select(User).where(User.email == email)).first()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Email '{email}' is already registered.",
-            )
+        conditions.append(User.email == email)
+    if employee_id:
+        conditions.append(User.employee_id == employee_id)
+    existing = session.exec(select(User).where(or_(*conditions))).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Phone, email, or employee ID already registered.")
