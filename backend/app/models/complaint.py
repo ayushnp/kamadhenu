@@ -46,6 +46,11 @@ class Complaint(SQLModel, table=True):
         index=True,
     )
 
+    # ─── Human-readable ID ──────────────────────────────────────────────────────
+    # Auto-assigned sequential number (1, 2, 3 …) — displayed as CMP-0001 etc.
+    # Unique per complaint; assigned at creation time in the service layer.
+    complaint_number: Optional[int] = Field(default=None, unique=True, index=True)
+
     # ─── Ownership & subject ───────────────────────────────────────────────────
     farmer_id: uuid.UUID = Field(foreign_key="users.id", index=True)
     bovine_id: uuid.UUID = Field(foreign_key="cows.id", index=True)

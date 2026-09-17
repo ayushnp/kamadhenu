@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from app.models.complaint import ALLOWED_TRANSITIONS, Complaint, ComplaintStatus
 from app.models.cow import Bovine
@@ -56,6 +56,7 @@ def raise_complaint(payload: ComplaintCreate, farmer: User, session: Session) ->
         animal_lng=bovine.longitude,
         assigned_to=nearest.id if nearest else None,
         status=ComplaintStatus.assigned if nearest else ComplaintStatus.open,
+        complaint_number=_next_complaint_number(session),
     )
     session.add(complaint)
     session.commit()
@@ -64,10 +65,23 @@ def raise_complaint(payload: ComplaintCreate, farmer: User, session: Session) ->
 
 
 def get_complaint(complaint_id: uuid.UUID, session: Session) -> Complaint:
-    """Fetch a complaint by ID — raises 404 if not found."""
+    """Fetch a complaint by UUID — raises 404 if not found."""
     complaint = session.get(Complaint, complaint_id)
     if not complaint:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
+    return complaint
+
+
+def get_complaint_by_number(complaint_number: int, session: Session) -> Complaint:
+    """Fetch a complaint by its human-readable complaint_number — raises 404 if not found."""
+    complaint = session.exec(
+        select(Complaint).where(Complaint.complaint_number == complaint_number)
+    ).first()
+    if not complaint:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Complaint CMP-{complaint_number:04d} not found",
+        )
     return complaint
 
 
@@ -234,3 +248,15 @@ def _find_nearest_staff(
             nearest = staff
 
     return nearest
+
+
+def _next_complaint_number(session: Session) -> int:
+    """Return the next sequential complaint number (MAX + 1, starting at 1).
+
+    Uses a single aggregation query — safe for low-concurrency usage.
+    The UNIQUE constraint on ``complaint_number`` provides a last-resort
+    guard against races in high-concurrency scenarios.
+    """
+    result = session.exec(select(func.max(Complaint.complaint_number))).one()
+    current_max = result if result is not None else 0
+    return current_max + 1

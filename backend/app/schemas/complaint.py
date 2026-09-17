@@ -26,6 +26,8 @@ class ComplaintRead(SQLModel):
     """Full complaint response — safe to return to any authenticated user."""
 
     id: uuid.UUID
+    complaint_number: Optional[int] = None
+    complaint_ref: Optional[str] = None   # formatted e.g. "CMP-0001"
     farmer_id: uuid.UUID
     bovine_id: uuid.UUID
     assigned_to: Optional[uuid.UUID] = None
@@ -38,6 +40,15 @@ class ComplaintRead(SQLModel):
     animal_lng: Optional[float] = None
     created_at: datetime
     updated_at: datetime
+
+    @classmethod
+    def from_complaint(cls, complaint) -> "ComplaintRead":
+        """Build a ComplaintRead with the formatted complaint_ref."""
+        data = complaint.model_dump()
+        data["complaint_ref"] = (
+            f"CMP-{complaint.complaint_number:04d}" if complaint.complaint_number else None
+        )
+        return cls(**data)
 
 
 # ─── Update — status (Doctor / Inspector) ─────────────────────────────────────

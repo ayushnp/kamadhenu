@@ -16,6 +16,7 @@ from app.schemas.complaint import (
 )
 from app.services.complaint_service import (
     get_complaint,
+    get_complaint_by_number,
     list_complaints,
     raise_complaint,
     reassign_complaint,
@@ -51,7 +52,7 @@ def create_complaint(
     status ``open`` and ``assigned_to=null``.
     """
     complaint = raise_complaint(payload, farmer, session)
-    return ComplaintRead.model_validate(complaint)
+    return ComplaintRead.from_complaint(complaint)
 
 
 @router.get(
@@ -74,7 +75,33 @@ def get_complaints(
     complaints = list_complaints(
         current_user, session, filter_status=filter_status, assigned_to=assigned_to
     )
-    return [ComplaintRead.model_validate(c) for c in complaints]
+    return [ComplaintRead.from_complaint(c) for c in complaints]
+
+
+@router.get(
+    "/number/{complaint_number}",
+    response_model=ComplaintRead,
+    summary="Get a complaint by its human-readable number (e.g. CMP-0001 → pass 1)",
+)
+def get_by_number(
+    complaint_number: int,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> ComplaintRead:
+    """Look up a complaint by its sequential number instead of UUID.
+
+    Farmers are restricted to their own complaints.
+    """
+    from fastapi import HTTPException, status as http_status
+
+    complaint = get_complaint_by_number(complaint_number, session)
+
+    if str(current_user.role) == UserRole.farmer and complaint.farmer_id != current_user.id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    return ComplaintRead.from_complaint(complaint)
 
 
 @router.get(
@@ -101,7 +128,7 @@ def get_single_complaint(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail="Access denied",
         )
-    return ComplaintRead.model_validate(complaint)
+    return ComplaintRead.from_complaint(complaint)
 
 
 @router.patch(
@@ -117,7 +144,7 @@ def assign_complaint(
 ) -> ComplaintRead:
     complaint = get_complaint(complaint_id, session)
     complaint = reassign_complaint(complaint, payload, session)
-    return ComplaintRead.model_validate(complaint)
+    return ComplaintRead.from_complaint(complaint)
 
 
 @router.patch(
@@ -141,4 +168,4 @@ def update_status(
     """
     complaint = get_complaint(complaint_id, session)
     complaint = update_complaint_status(complaint, payload, current_user, session)
-    return ComplaintRead.model_validate(complaint)
+    return ComplaintRead.from_complaint(complaint)

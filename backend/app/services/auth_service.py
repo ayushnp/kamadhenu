@@ -42,6 +42,8 @@ def create_staff(payload: StaffCreate, session: Session) -> User:
         employee_id=payload.employee_id,
         department=payload.department,
         jurisdiction=payload.jurisdiction,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
     )
     session.add(user)
     session.commit()
