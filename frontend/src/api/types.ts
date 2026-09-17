@@ -108,3 +108,152 @@ export interface StaffCreate {
   department?: string | null;
   jurisdiction?: string | null;
 }
+
+/* ── Complaints ───────────────────────────────────────────────────────────── */
+
+export type ComplaintStatus = 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed';
+export type ComplaintPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Complaint {
+  id: string;
+  complaint_number: number | null;
+  complaint_ref: string | null; // e.g. "CMP-0001"
+  farmer_id: string;
+  bovine_id: string;
+  assigned_to: string | null;
+  status: ComplaintStatus;
+  priority: ComplaintPriority;
+  description: string;
+  symptoms: string | null;
+  resolved_notes: string | null;
+  animal_lat: number | null;
+  animal_lng: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplaintCreate {
+  bovine_id: string;
+  description: string;
+  priority?: ComplaintPriority;
+  symptoms?: string | null;
+}
+
+export interface ComplaintStatusUpdate {
+  status: ComplaintStatus;
+  resolved_notes?: string | null;
+}
+
+export interface ComplaintReassign {
+  assigned_to: string;
+}
+
+/* ── IoT Sensors & Telemetry ──────────────────────────────────────────────── */
+
+export type MilkQuarter = 'FL' | 'FR' | 'RL' | 'RR';
+export type CMTResult = 'negative' | 'trace' | '1+' | '2+' | '3+';
+
+export interface WearableReading {
+  id: string;
+  cow_id: string;
+  recorded_at: string;
+  activity_index: number;
+  rumination_minutes: number;
+  body_temperature: number | null;
+  lying_time_minutes: number | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface WearableIngest {
+  cow_id?: string | null;
+  pashu_aadhar?: string | null;
+  recorded_at?: string | null;
+  activity_index: number;
+  rumination_minutes: number;
+  body_temperature?: number | null;
+  lying_time_minutes?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface WearableBatchIngest {
+  readings: WearableIngest[];
+}
+
+export interface MilkReading {
+  id: string;
+  cow_id: string;
+  quarter: MilkQuarter;
+  recorded_at: string;
+  electrical_conductivity: number;
+  ph: number;
+  turbidity: number | null;
+  milk_temperature: number | null;
+  cmt_result: CMTResult | null;
+  scc: number | null;
+}
+
+export interface MilkQuarterItem {
+  quarter: MilkQuarter;
+  electrical_conductivity: number;
+  ph: number;
+  turbidity?: number | null;
+  milk_temperature?: number | null;
+  cmt_result?: CMTResult | null;
+  scc?: number | null;
+}
+
+export interface MilkIngest {
+  cow_id?: string | null;
+  pashu_aadhar?: string | null;
+  recorded_at?: string | null;
+  quarter: MilkQuarter;
+  electrical_conductivity: number;
+  ph: number;
+  turbidity?: number | null;
+  milk_temperature?: number | null;
+  cmt_result?: CMTResult | null;
+  scc?: number | null;
+}
+
+export interface MilkSessionIngest {
+  cow_id?: string | null;
+  pashu_aadhar?: string | null;
+  recorded_at?: string | null;
+  quarters: MilkQuarterItem[];
+}
+
+export interface EnvironmentReading {
+  id: string;
+  farmer_id: string;
+  recorded_at: string;
+  ambient_temperature: number;
+  humidity: number;
+  bedding_moisture: number;
+  ammonia_ppm: number | null;
+  hygiene_score: number | null;
+}
+
+export interface EnvironmentIngest {
+  farmer_id?: string | null;
+  farmer_phone?: string | null;
+  recorded_at?: string | null;
+  ambient_temperature: number;
+  humidity: number;
+  bedding_moisture: number;
+  ammonia_ppm?: number | null;
+  hygiene_score?: number | null;
+}
+
+export interface CowTelemetrySummary {
+  cow_id: string;
+  pashu_aadhar: string | null;
+  cow_name: string | null;
+  days_requested: number;
+  wearable_records_count: number;
+  milk_records_count: number;
+  wearable: WearableReading[];
+  milk: MilkReading[];
+}
+

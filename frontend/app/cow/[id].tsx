@@ -4,19 +4,20 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Badge, Banner, Button, Caption, Card, Empty, Heading, Segmented, Title } from '../../src/components/ui';
 import CowLoader from '../../src/components/CowLoader';
-import { cows as cowsApi, ApiError } from '../../src/api';
-import type { CowWithHistory } from '../../src/api/types';
+import { cows as cowsApi, sensors as sensorsApi, ApiError } from '../../src/api';
+import type { CowTelemetrySummary, CowWithHistory, MilkReading, WearableReading } from '../../src/api/types';
 import { useAuth } from '../../src/lib/auth';
 import { cowLabel, cowSubtitle, daysUntil, nextDue, openConditions, prettyDate } from '../../src/lib/format';
 import { colors, font, radius, size, space } from '../../src/theme';
 
-type Tab = 'health' | 'vaccines' | 'identity';
+type Tab = 'health' | 'vaccines' | 'telemetry' | 'identity';
 
 export default function CowDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const [cow, setCow] = useState<CowWithHistory | null>(null);
+  const [telemetry, setTelemetry] = useState<CowTelemetrySummary | null>(null);
   const [tab, setTab] = useState<Tab>('health');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,12 @@ export default function CowDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      setCow(await cowsApi.detail(id));
+      const [cowData, telemetryData] = await Promise.all([
+        cowsApi.detail(id),
+        sensorsApi.cowSummary(id, 14).catch(() => null),
+      ]);
+      setCow(cowData);
+      setTelemetry(telemetryData);
       setError('');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not load this animal.');
@@ -53,6 +59,10 @@ export default function CowDetail() {
   const dueIn = daysUntil(due?.next_due_date ?? null);
   const canEdit = user?.role === 'farmer' && user.id === cow.farmer_id;
 
+  const latestWearable = telemetry?.wearable && telemetry.wearable.length > 0 ? telemetry.wearable[0] : null;
+  const recentMilk = telemetry?.milk && telemetry.milk.length > 0 ? telemetry.milk.slice(0, 4) : [];
+  const mastitisQuarter = recentMilk.find((m) => m.electrical_conductivity > 5.8 || m.ph > 6.8 || (m.cmt_result && m.cmt_result !== 'negative'));
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.surface }}
@@ -70,7 +80,7 @@ export default function CowDetail() {
         {cowSubtitle(cow) || 'Details not filled in'}
       </Text>
 
-      <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md, marginBottom: space.xl, flexWrap: 'wrap' }}>
+      <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md, marginBottom: space.md, flexWrap: 'wrap' }}>
         {open.length > 0
           ? <Badge label={`${open.length} open condition${open.length > 1 ? 's' : ''}`} tone="risk" />
           : <Badge label="No open conditions" tone="good" />}
@@ -81,6 +91,16 @@ export default function CowDetail() {
           />
         )}
         {(cow.lactation_number ?? 0) > 0 && <Badge label={`Lactation ${cow.lactation_number}`} tone="neutral" />}
+        {mastitisQuarter && <Badge label={`Mastitis risk (${mastitisQuarter.quarter})`} tone="risk" />}
+      </View>
+
+      {/* Quick Action: Raise Complaint */}
+      <View style={{ marginBottom: space.lg }}>
+        <Button
+          label="🚨 Raise Health Complaint"
+          onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
+          variant="secondary"
+        />
       </View>
 
       <Banner message={error} />
@@ -91,6 +111,7 @@ export default function CowDetail() {
         options={[
           { value: 'health', label: `Health (${cow.health_records.length})` },
           { value: 'vaccines', label: `Vaccines (${cow.vaccinations.length})` },
+          { value: 'telemetry', label: `Sensors (${(telemetry?.wearable_records_count ?? 0) + (telemetry?.milk_records_count ?? 0)})` },
           { value: 'identity', label: 'Identity' },
         ]}
       />
@@ -153,6 +174,134 @@ export default function CowDetail() {
         </>
       )}
 
+      {tab === 'telemetry' && (
+        <>
+          {/* Collar Wearable Telemetry */}
+          <Heading>Collar Vitals</Heading>
+          {latestWearable ? (
+            <Card>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm }}>
+                <Text style={{ fontFamily: font.bodyMid, fontSize: size.xs, color: colors.muted }}>
+                  LATEST SYNC: {prettyDate(latestWearable.recorded_at)}
+                </Text>
+                {latestWearable.latitude != null && (
+                  <Badge label="GPS Active" tone="good" />
+                )}
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.sm }}>
+                <TelemetryCard
+                  title="Body Temp"
+                  value={latestWearable.body_temperature != null ? `${latestWearable.body_temperature.toFixed(1)}°C` : '—'}
+                  status={
+                    latestWearable.body_temperature == null
+                      ? 'neutral'
+                      : latestWearable.body_temperature > 39.5
+                      ? 'risk'
+                      : 'good'
+                  }
+                  hint="Normal: 38.0–39.2°C"
+                />
+                <TelemetryCard
+                  title="Rumination"
+                  value={`${latestWearable.rumination_minutes.toFixed(0)} min`}
+                  status={latestWearable.rumination_minutes < 15 ? 'warn' : 'good'}
+                  hint="Chewing index"
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: space.sm }}>
+                <TelemetryCard
+                  title="Activity Index"
+                  value={latestWearable.activity_index.toFixed(1)}
+                  status="neutral"
+                  hint="Movement magnitude"
+                />
+                <TelemetryCard
+                  title="Lying Time"
+                  value={latestWearable.lying_time_minutes != null ? `${latestWearable.lying_time_minutes.toFixed(0)} min` : '—'}
+                  status="neutral"
+                  hint="Rest period"
+                />
+              </View>
+            </Card>
+          ) : (
+            <Card>
+              <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted }}>
+                No collar readings received yet for this animal.
+              </Text>
+            </Card>
+          )}
+
+          {/* Milk Analyzer Telemetry */}
+          <View style={{ marginTop: space.lg }}>
+            <Heading>Milking & Udder Analytics</Heading>
+          </View>
+          {recentMilk.length > 0 ? (
+            <>
+              {mastitisQuarter && (
+                <Card style={{ backgroundColor: colors.sindoorSoft, borderColor: colors.sindoor }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Feather name="alert-triangle" size={17} color={colors.sindoor} style={{ marginRight: 6 }} />
+                    <Text style={{ fontFamily: font.bodySemi, fontSize: size.sm, color: colors.sindoor }}>
+                      Subclinical Mastitis Warning detected in {mastitisQuarter.quarter} quarter!
+                    </Text>
+                  </View>
+                  <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark, marginBottom: space.sm }}>
+                    Electrical conductivity ({mastitisQuarter.electrical_conductivity.toFixed(2)} mS/cm) or pH ({mastitisQuarter.ph.toFixed(2)}) is outside normal threshold.
+                  </Text>
+                  <Button
+                    label="Raise Urgent Complaint"
+                    onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
+                  />
+                </Card>
+              )}
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                {recentMilk.map((m) => (
+                  <View
+                    key={m.id}
+                    style={{
+                      flex: 1,
+                      minWidth: '46%',
+                      backgroundColor: colors.milk,
+                      borderRadius: radius.md,
+                      padding: space.md,
+                      borderWidth: 1,
+                      borderColor: m.electrical_conductivity > 5.8 ? colors.sindoor : colors.line,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: font.displayMid, fontSize: size.base, color: colors.ink }}>
+                        Quarter {m.quarter}
+                      </Text>
+                      {m.cmt_result && <Badge label={`CMT ${m.cmt_result}`} tone={m.cmt_result === 'negative' ? 'good' : 'warn'} />}
+                    </View>
+                    <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted, marginTop: 4 }}>
+                      EC: {m.electrical_conductivity.toFixed(2)} mS/cm
+                    </Text>
+                    <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted }}>
+                      pH: {m.ph.toFixed(2)} {m.ph > 6.8 ? '(alkaline)' : ''}
+                    </Text>
+                    {m.scc != null && (
+                      <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark, marginTop: 2 }}>
+                        SCC: {m.scc.toLocaleString()} cells/mL
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <Card>
+              <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted }}>
+                No 4-quarter milk testing records found.
+              </Text>
+            </Card>
+          )}
+        </>
+      )}
+
       {tab === 'identity' && (
         <Card>
           <Line label="Pashu Aadhar" value={cow.pashu_aadhar ?? '—'} />
@@ -175,6 +324,27 @@ export default function CowDetail() {
         </Card>
       )}
     </ScrollView>
+  );
+}
+
+function TelemetryCard({
+  title,
+  value,
+  status,
+  hint,
+}: {
+  title: string;
+  value: string;
+  status: 'good' | 'warn' | 'risk' | 'neutral';
+  hint: string;
+}) {
+  const fg = status === 'risk' ? colors.sindoor : status === 'warn' ? colors.marigold : colors.ink;
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.sm, padding: space.md, borderWidth: 1, borderColor: colors.line }}>
+      <Text style={{ fontFamily: font.bodyMid, fontSize: size.xs, color: colors.muted }}>{title}</Text>
+      <Text style={{ fontFamily: font.displayMid, fontSize: size.lg, color: fg, marginVertical: 2 }}>{value}</Text>
+      <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark }}>{hint}</Text>
+    </View>
   );
 }
 

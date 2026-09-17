@@ -19,6 +19,10 @@ export default function TabsLayout() {
         options={{ title: 'Herd', tabBarIcon: ({ color, size: s }) => <Feather name="home" size={s} color={color} /> }}
       />
       <Tabs.Screen
+        name="complaints"
+        options={{ title: 'Complaints', tabBarIcon: ({ color, size: s }) => <Feather name="alert-circle" size={s} color={color} /> }}
+      />
+      <Tabs.Screen
         name="lookup"
         options={{ title: 'Find animal', tabBarIcon: ({ color, size: s }) => <Feather name="search" size={s} color={color} /> }}
       />

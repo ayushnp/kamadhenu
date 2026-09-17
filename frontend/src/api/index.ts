@@ -62,5 +62,46 @@ export const vaccinations = {
   }) => request<Vaccination>(`/cows/${cowId}/vaccinations/`, { method: 'POST', body: payload }),
 };
 
+/* ── Complaints ───────────────────────────────────────────────────────────── */
+export const complaints = {
+  create: (payload: import('./types').ComplaintCreate) =>
+    request<import('./types').Complaint>('/complaints/', { method: 'POST', body: payload }),
+  list: (params?: { status?: import('./types').ComplaintStatus; assigned_to?: string }) =>
+    request<import('./types').Complaint[]>('/complaints/', { query: params }),
+  byNumber: (complaintNumber: number) =>
+    request<import('./types').Complaint>(`/complaints/number/${complaintNumber}`),
+  byId: (id: string) =>
+    request<import('./types').Complaint>(`/complaints/${id}`),
+  assign: (id: string, payload: import('./types').ComplaintReassign) =>
+    request<import('./types').Complaint>(`/complaints/${id}/assign`, { method: 'PATCH', body: payload }),
+  updateStatus: (id: string, payload: import('./types').ComplaintStatusUpdate) =>
+    request<import('./types').Complaint>(`/complaints/${id}/status`, { method: 'PATCH', body: payload }),
+};
+
+/* ── IoT Sensors & Telemetry ──────────────────────────────────────────────── */
+export const sensors = {
+  cowWearable: (cowId: string, days = 14) =>
+    request<import('./types').WearableReading[]>(`/sensors/cows/${cowId}/wearable`, { query: { days } }),
+  cowMilk: (cowId: string, days = 14) =>
+    request<import('./types').MilkReading[]>(`/sensors/cows/${cowId}/milk`, { query: { days } }),
+  cowSummary: (cowId: string, days = 14) =>
+    request<import('./types').CowTelemetrySummary>(`/sensors/cows/${cowId}/summary`, { query: { days } }),
+  farmEnvironment: (days = 7, farmerId?: string) =>
+    request<import('./types').EnvironmentReading[]>('/sensors/farm/environment', {
+      query: { days, ...(farmerId ? { farmer_id: farmerId } : {}) },
+    }),
+  ingestWearable: (payload: import('./types').WearableIngest) =>
+    request<import('./types').WearableReading>('/sensors/wearable', { method: 'POST', body: payload }),
+  ingestWearableBatch: (payload: import('./types').WearableBatchIngest) =>
+    request<import('./types').WearableReading[]>('/sensors/wearable/batch', { method: 'POST', body: payload }),
+  ingestMilk: (payload: import('./types').MilkIngest) =>
+    request<import('./types').MilkReading>('/sensors/milk', { method: 'POST', body: payload }),
+  ingestMilkSession: (payload: import('./types').MilkSessionIngest) =>
+    request<import('./types').MilkReading[]>('/sensors/milk/session', { method: 'POST', body: payload }),
+  ingestEnvironment: (payload: import('./types').EnvironmentIngest) =>
+    request<import('./types').EnvironmentReading>('/sensors/environment', { method: 'POST', body: payload }),
+};
+
 export * from './types';
 export { ApiError, API_URL } from './client';
+

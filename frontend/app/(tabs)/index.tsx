@@ -66,6 +66,7 @@ function roleLine(role?: string) {
 function FarmerHome({ herd, loading, onOpen, onAdd }: {
   herd: Cow[]; loading: boolean; onOpen: (id: string) => void; onAdd: () => void;
 }) {
+  const router = useRouter();
   if (loading && herd.length === 0) {
     return <CowLoader label="Loading your herd…" />;
   }
@@ -114,11 +115,52 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
       ))}
 
       <Button label="Add an animal" onPress={onAdd} variant="secondary" />
+
+      {/* Farm IoT & Health Hub */}
+      <View style={{ marginTop: space.xl }}>
+        <Heading>Farm Monitoring & Support</Heading>
+      </View>
+      <Pressable onPress={() => router.push('/farm/environment')}>
+        <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{
+            width: 44, height: 44, borderRadius: radius.pill, backgroundColor: '#e0f2fe',
+            alignItems: 'center', justifyContent: 'center', marginRight: space.md,
+          }}>
+            <Feather name="wind" size={20} color="#0369a1" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>Barn Environment Monitor</Text>
+            <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
+              Track ventilation, humidity, bedding moisture & ammonia
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.muted} />
+        </Card>
+      </Pressable>
+
+      <Pressable onPress={() => router.push('/(tabs)/complaints')}>
+        <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{
+            width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.marigoldSoft,
+            alignItems: 'center', justifyContent: 'center', marginRight: space.md,
+          }}>
+            <Feather name="alert-circle" size={20} color="#8A5D13" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>Veterinary Complaints</Text>
+            <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
+              Request doctor dispatch & track treatment status
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.muted} />
+        </Card>
+      </Pressable>
     </>
   );
 }
 
 function StaffHome({ onLookup }: { onLookup: () => void }) {
+  const router = useRouter();
   return (
     <>
       <Card>
@@ -129,10 +171,29 @@ function StaffHome({ onLookup }: { onLookup: () => void }) {
         <Button label="Find an animal" onPress={onLookup} />
       </Card>
 
+      <Pressable onPress={() => router.push('/(tabs)/complaints')}>
+        <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{
+            width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.marigoldSoft,
+            alignItems: 'center', justifyContent: 'center', marginRight: space.md,
+          }}>
+            <Feather name="inbox" size={20} color="#8A5D13" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>Field Response Inbox</Text>
+            <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
+              View and resolve assigned farmer health complaints
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.muted} />
+        </Card>
+      </Pressable>
+
       <Card>
         <Heading>What you can record</Heading>
         <Row icon="activity" text="Disease and treatment records, including chronic conditions" />
         <Row icon="shield" text="Vaccinations given and when the next dose is due" />
+        <Row icon="cpu" text="Review continuous collar telemetry & milk quality analytics" />
         <Row icon="map-pin" text="Herd lists for any farmer in your jurisdiction" />
       </Card>
     </>
