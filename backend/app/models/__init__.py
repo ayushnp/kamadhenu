@@ -12,6 +12,7 @@ from app.models.sensor import (
 )
 from app.models.user import User, UserRole
 from app.models.vaccination import Vaccination
+from app.models.risk import RiskScore
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "EnvironmentReading",
     "MilkQuarter",
     "CMTResult",
+    "RiskScore",
 ]

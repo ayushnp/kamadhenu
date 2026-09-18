@@ -3,7 +3,7 @@
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 
 from app.core.deps import CurrentUser, SessionDep
 from app.models.cow import Bovine
@@ -51,6 +51,23 @@ def _assert_cow_access(cow_id: uuid.UUID, user, session) -> Bovine:
     return cow
 
 
+# ─── Background risk scoring helper ──────────────────────────────────────────
+
+def _bg_score_cow(cow_id: uuid.UUID) -> None:
+    """Fire-and-forget: score cow and persist in isolated session. Never raises."""
+    try:
+        from app.database import engine
+        from sqlmodel import Session
+        from ml.engine import score_cow
+        from app.services.risk_service import save_risk_score
+
+        with Session(engine) as session:
+            result = score_cow(cow_id, session, window_days=7)
+            save_risk_score(cow_id, result, session)
+    except Exception:
+        pass
+
+
 # ─── Ingest Endpoints (Collar / Milk Analyzer / Barn Node) ─────────────────────
 
 @router.post(
@@ -61,10 +78,13 @@ def _assert_cow_access(cow_id: uuid.UUID, user, session) -> Bovine:
 )
 def record_wearable(
     payload: WearableIngest,
+    background_tasks: BackgroundTasks,
     session: SessionDep,
     user: CurrentUser,
 ) -> WearableRead:
     reading = ingest_wearable(payload, session)
+    # Auto-score in background so risk is always fresh after new data
+    background_tasks.add_task(_bg_score_cow, payload.cow_id)
     return WearableRead.model_validate(reading)
 
 
@@ -106,10 +126,14 @@ def record_milk(
 )
 def record_milk_session(
     payload: MilkSessionIngest,
+    background_tasks: BackgroundTasks,
     session: SessionDep,
     user: CurrentUser,
 ) -> List[MilkRead]:
     readings = ingest_milk_session(payload, session)
+    # Auto-score in background — milk session is the richest data point
+    if readings:
+        background_tasks.add_task(_bg_score_cow, readings[0].cow_id)
     return [MilkRead.model_validate(r) for r in readings]
 
 

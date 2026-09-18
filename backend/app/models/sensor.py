@@ -91,6 +91,12 @@ class MilkReading(SQLModel, table=True):
     )
     scc: Optional[int] = Field(default=None, ge=0)  # somatic cell count cells/mL
 
+    # ─── Yield ────────────────────────────────────────────────────────────────
+    # Total milk yield (litres) collected at this milking session from all 4 quarters.
+    # A >15% drop from the cow's own rolling baseline is the #1 early clinical signal.
+    # Used as AI risk feature: milk_yield_pct_change.
+    milk_yield_litres: Optional[float] = Field(default=None, ge=0.0)
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (

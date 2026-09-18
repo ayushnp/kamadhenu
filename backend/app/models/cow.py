@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
@@ -38,6 +38,12 @@ class Bovine(SQLModel, table=True):
     age_years: Optional[float] = Field(default=None, ge=0)
     calf_number: Optional[int] = Field(default=None, ge=0)    # parity / number of calves
     lactation_number: Optional[int] = Field(default=None, ge=0)
+
+    # ─── Lactation & Reproductive ─────────────────────────────────────────────
+    # Date the current lactation started (calving / freshening date).
+    # Used to compute Days-In-Milk (DIM) = date.today() - freshening_date.
+    # First 30 DIM carries ~3× higher mastitis risk — key AI risk feature.
+    freshening_date: Optional[date] = Field(default=None)
 
     # ─── Location (GPS) ───────────────────────────────────────────────────────
     latitude: Optional[float] = Field(default=None)
