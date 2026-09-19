@@ -6,19 +6,15 @@ import { Feather } from '@expo/vector-icons';
 import { Banner, Button, Caption, Card, Field, Screen, Segmented, Title } from '../../src/components/ui';
 import { cows as cowsApi, ApiError } from '../../src/api';
 import type { CowWithHistory } from '../../src/api/types';
+import { useTranslation } from '../../src/i18n';
 import { cowLabel, cowSubtitle, openConditions } from '../../src/lib/format';
 import { colors, font, radius, size, space } from '../../src/theme';
 
 type Mode = 'tag_number' | 'pashu_aadhar' | 'barcode';
 
-const MODES = [
-  { value: 'tag_number' as Mode, label: 'Ear tag' },
-  { value: 'pashu_aadhar' as Mode, label: 'Pashu Aadhar' },
-  { value: 'barcode' as Mode, label: 'Barcode' },
-];
-
 export default function Lookup() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('tag_number');
   const [value, setValue] = useState('');
   const [result, setResult] = useState<CowWithHistory | null>(null);
@@ -27,9 +23,15 @@ export default function Lookup() {
   const [scanning, setScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
 
+  const modes = [
+    { value: 'tag_number' as Mode, label: t('lookup.earTag') },
+    { value: 'pashu_aadhar' as Mode, label: t('lookup.pashuAadhar') },
+    { value: 'barcode' as Mode, label: t('lookup.barcode') },
+  ];
+
   async function search(raw?: string) {
     const q = (raw ?? value).trim();
-    if (!q) return setError('Enter a number to search for.');
+    if (!q) return setError(t('lookup.searchPlaceholder'));
     setBusy(true);
     setError('');
     setResult(null);
@@ -56,15 +58,15 @@ export default function Lookup() {
   return (
     <Screen>
       <View style={{ marginTop: 48, marginBottom: space.xl }}>
-        <Caption>Any registered animal</Caption>
-        <Title>Find an animal</Title>
+        <Caption>{t('lookup.caption')}</Caption>
+        <Title>{t('lookup.title')}</Title>
       </View>
 
       <Banner message={error} />
-      <Segmented options={MODES} value={mode} onChange={(m) => { setMode(m); setResult(null); }} />
+      <Segmented options={modes} value={mode} onChange={(m) => { setMode(m); setResult(null); }} />
 
       <Field
-        label={MODES.find((m) => m.value === mode)!.label}
+        label={modes.find((m) => m.value === mode)!.label}
         value={value}
         onChangeText={setValue}
         autoCapitalize="characters"
@@ -75,8 +77,8 @@ export default function Lookup() {
         onSubmitEditing={() => search()}
       />
 
-      <Button label="Search" onPress={() => search()} loading={busy} />
-      <Button label="Scan a barcode" onPress={openScanner} variant="secondary" />
+      <Button label={t('lookup.searchBtn')} onPress={() => search()} loading={busy} />
+      <Button label={t('lookup.scanTagBtn')} onPress={openScanner} variant="secondary" />
 
       {result && (
         <Pressable onPress={() => router.push(`/cow/${result.id}`)}>

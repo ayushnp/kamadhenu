@@ -9,11 +9,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import VideoSplash from '../src/components/VideoSplash';
 import { TransitionOverlay } from '../src/components/CowLoader';
 import { AuthProvider, useAuth } from '../src/lib/auth';
+import { LanguageProvider, useTranslation } from '../src/i18n';
+import LanguageModal from '../src/components/LanguageModal';
 import { colors } from '../src/theme';
 
 /** Sends people to the right half of the app once we know who they are. */
 function Gate({ splashActive }: { splashActive?: boolean }) {
   const { user, ready } = useAuth();
+  const { isInitialized } = useTranslation();
   const segments = useSegments();
   const router = useRouter();
   const pathname = usePathname();
@@ -56,6 +59,7 @@ function Gate({ splashActive }: { splashActive?: boolean }) {
         <Stack.Screen name="cow/[id]" options={{ presentation: 'card' }} />
       </Stack>
       <TransitionOverlay visible={!splashActive && transitioning} />
+      <LanguageModal visible={!splashActive && !isInitialized} />
     </View>
   );
 }
@@ -70,10 +74,12 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" />
-      {/* Background: Auth & Navigation preload immediately while video plays */}
-      <AuthProvider>
-        {fontsLoaded ? <Gate splashActive={!introDone} /> : null}
-      </AuthProvider>
+      {/* Background: Auth, I18n & Navigation preload immediately while video plays */}
+      <LanguageProvider>
+        <AuthProvider>
+          {fontsLoaded ? <Gate splashActive={!introDone} /> : null}
+        </AuthProvider>
+      </LanguageProvider>
 
       {/* Foreground: Video splash screen plays on top with highest z-index */}
       {!introDone && (

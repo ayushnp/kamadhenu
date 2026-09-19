@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -11,54 +11,24 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from '../../src/i18n';
+import LanguageModal from '../../src/components/LanguageModal';
 import { colors, font, radius, size, space } from '../../src/theme';
-
-/* ── Role card data ────────────────────────────────────────────────────────── */
-const ROLES = [
-  {
-    id: 'farmer',
-    emoji: '🐄',
-    title: 'Farmer',
-    subtitle: 'Manage your herd, track health & milk yield',
-    accent: colors.pasture,
-    accentSoft: colors.pastureSoft,
-    available: true,
-  },
-  {
-    id: 'doctor',
-    emoji: '🩺',
-    title: 'Veterinary Doctor',
-    subtitle: 'Review cases, diagnose & prescribe treatment',
-    accent: '#2970B8',
-    accentSoft: '#E0EDFC',
-    available: false,
-  },
-  {
-    id: 'inspector',
-    emoji: '🔍',
-    title: 'Inspector',
-    subtitle: 'Conduct field visits and submit compliance reports',
-    accent: colors.marigold,
-    accentSoft: colors.marigoldSoft,
-    available: false,
-  },
-  {
-    id: 'authority',
-    emoji: '🏛️',
-    title: 'District Authority',
-    subtitle: 'Monitor district-wide herd health & alerts',
-    accent: colors.sindoor,
-    accentSoft: colors.sindoorSoft,
-    available: false,
-  },
-] as const;
 
 /* ── Animated role card ────────────────────────────────────────────────────── */
 function RoleCard({
   role,
   onPress,
 }: {
-  role: (typeof ROLES)[number];
+  role: {
+    id: string;
+    emoji: string;
+    title: string;
+    subtitle: string;
+    accent: string;
+    accentSoft: string;
+    available: boolean;
+  };
   onPress: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -79,8 +49,6 @@ function RoleCard({
           { borderColor: role.accent + '40' },
           pressed && { opacity: 0.92 },
         ]}
-        accessibilityRole="button"
-        accessibilityLabel={`${role.title} login`}
       >
         {/* Accent strip on left */}
         <View style={[styles.accentStrip, { backgroundColor: role.accent }]} />
@@ -94,28 +62,67 @@ function RoleCard({
             <Text style={[styles.cardTitle, { color: role.accent }]}>{role.title}</Text>
             {!role.available && (
               <View style={styles.soonBadge}>
-                <Text style={styles.soonText}>Coming soon</Text>
+                <Text style={styles.soonText}>SOON</Text>
               </View>
             )}
           </View>
-          <Text style={styles.cardSub}>{role.subtitle}</Text>
+          <Text style={styles.cardSub} numberOfLines={2}>
+            {role.subtitle}
+          </Text>
         </View>
-
-        {/* Arrow indicator */}
-        <Text style={[styles.arrow, { color: role.accent + '99' }]}>›</Text>
       </Pressable>
     </Animated.View>
   );
 }
 
-/* ── Landing screen ────────────────────────────────────────────────────────── */
+/* ── Main Landing Screen ───────────────────────────────────────────────────── */
 export default function LandingScreen() {
   const router = useRouter();
+  const { t, locale } = useTranslation();
+  const [langModalVisible, setLangModalVisible] = useState(false);
+
+  const roles = [
+    {
+      id: 'farmer',
+      emoji: '🐄',
+      title: t('landing.farmerTitle'),
+      subtitle: t('landing.farmerSub'),
+      accent: colors.pasture,
+      accentSoft: colors.pastureSoft,
+      available: true,
+    },
+    {
+      id: 'doctor',
+      emoji: '🩺',
+      title: t('landing.doctorTitle'),
+      subtitle: t('landing.doctorSub'),
+      accent: '#2970B8',
+      accentSoft: '#E0EDFC',
+      available: false,
+    },
+    {
+      id: 'inspector',
+      emoji: '🔍',
+      title: t('landing.inspectorTitle'),
+      subtitle: t('landing.inspectorSub'),
+      accent: colors.marigold,
+      accentSoft: colors.marigoldSoft,
+      available: false,
+    },
+    {
+      id: 'authority',
+      emoji: '🏛️',
+      title: t('landing.authorityTitle'),
+      subtitle: t('landing.authoritySub'),
+      accent: colors.sindoor,
+      accentSoft: colors.sindoorSoft,
+      available: false,
+    },
+  ];
 
   function handleRolePress(roleId: string, available: boolean) {
     if (!available) {
-      const msg =
-        'This portal is coming soon. Login credentials will be issued by your district authority.';
+      const msg = 'This portal is under development and will be available soon.';
       if (Platform.OS === 'android') {
         ToastAndroid.show(msg, ToastAndroid.LONG);
       } else {
@@ -133,17 +140,38 @@ export default function LandingScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.logoText}>🌿 KAMADHENU</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm }}>
+          <Text style={styles.logoText}>🌿 KAMADHENU</Text>
+          <Pressable
+            onPress={() => setLangModalVisible(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.pastureSoft,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: radius.pill,
+              borderWidth: 1,
+              borderColor: colors.pasture + '40',
+            }}
+          >
+            <Text style={{ fontSize: 13, marginRight: 4 }}>🌐</Text>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.xs, color: colors.pasture }}>
+              {locale === 'kn' ? 'ಕನ್ನಡ' : locale === 'hi' ? 'हिंदी' : 'English'}
+            </Text>
+          </Pressable>
+        </View>
+
         <Text style={styles.tagline}>VIMARSHA · Bovine AI</Text>
-        <Text style={styles.heading}>Who are you?</Text>
+        <Text style={styles.heading}>{t('landing.chooseRole')}</Text>
         <Text style={styles.subheading}>
-          Select your role to sign in or create an account.
+          {t('landing.heroSubtitle')}
         </Text>
       </View>
 
       {/* Role cards */}
       <View style={styles.cards}>
-        {ROLES.map((role) => (
+        {roles.map((role) => (
           <RoleCard
             key={role.id}
             role={role}
@@ -157,6 +185,11 @@ export default function LandingScreen() {
         Credentials for veterinary, inspector &amp; authority portals are issued by your
         district animal husbandry department.
       </Text>
+
+      <LanguageModal
+        visible={langModalVisible}
+        onDismiss={() => setLangModalVisible(false)}
+      />
     </ScrollView>
   );
 }

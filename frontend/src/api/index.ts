@@ -102,6 +102,21 @@ export const sensors = {
     request<import('./types').EnvironmentReading>('/sensors/environment', { method: 'POST', body: payload }),
 };
 
+/* ── Alerts & Notifications ────────────────────────────────────────────────── */
+export const alerts = {
+  my: (limit = 50) =>
+    request<import('./types').AlertsListResponse>('/alerts/my', { query: { limit } }),
+  markRead: (id: string) =>
+    request<import('./types').AlertRead>(`/alerts/${id}/read`, { method: 'PATCH' }),
+  registerPushToken: (push_token: string) =>
+    request<{ status: string; message: string }>('/alerts/push-token', { method: 'POST', body: { push_token } }),
+  outbreaks: () =>
+    request<import('./types').OutbreakCluster[]>('/alerts/outbreaks'),
+  simulate: () =>
+    request<import('./types').AlertRead>('/alerts/simulate', { method: 'POST' }),
+};
+
 export * from './types';
 export { ApiError, API_URL } from './client';
+
 

@@ -257,3 +257,37 @@ export interface CowTelemetrySummary {
   milk: MilkReading[];
 }
 
+/* ── Alerts & Notifications ────────────────────────────────────────────────── */
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type AlertType = 'high_risk_mastitis' | 'case_assigned' | 'outbreak_warning' | 'vaccine_overdue';
+
+export interface AlertRead {
+  id: string;
+  user_id: string | null;
+  target_role: UserRole | null;
+  bovine_id: string | null;
+  complaint_id: string | null;
+  title: string;
+  message: string;
+  alert_type: AlertType;
+  severity: AlertSeverity;
+  is_read: boolean;
+  data_json: string | null;
+  created_at: string;
+}
+
+export interface AlertsListResponse {
+  alerts: AlertRead[];
+  unread_count: number;
+}
+
+export interface OutbreakCluster {
+  village_or_place: string;
+  case_count: number;
+  severity: AlertSeverity;
+  affected_cow_ids: string[];
+  alert_triggered: boolean;
+  latest_incident_at: string;
+}
+
+

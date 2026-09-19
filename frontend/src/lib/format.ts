@@ -3,8 +3,19 @@ import type { Cow, HealthRecord, Vaccination } from '../api/types';
 export const cowLabel = (c: Cow) =>
   c.name || (c.tag_number ? `Tag ${c.tag_number}` : null) || (c.pashu_aadhar ? `Pashu Aadhar ${c.pashu_aadhar}` : null) || 'Unnamed animal';
 
-export const cowSubtitle = (c: Cow) =>
-  [c.breed, c.species, c.age_years != null ? `${c.age_years} yr` : null].filter(Boolean).join(' · ');
+export const cowSubtitle = (c: Cow, t?: (key: string, params?: any) => string) => {
+  const speciesLabel = t
+    ? c.species === 'buffalo'
+      ? t('home.speciesBuffalo')
+      : t('home.speciesCattle')
+    : c.species;
+  const ageLabel = c.age_years != null
+    ? t
+      ? t('home.ageYr', { age: c.age_years })
+      : `${c.age_years} yr`
+    : null;
+  return [c.breed, speciesLabel, ageLabel].filter(Boolean).join(' · ');
+};
 
 /** Today as YYYY-MM-DD — the format FastAPI's `date` fields expect. */
 export const today = () => new Date().toISOString().slice(0, 10);

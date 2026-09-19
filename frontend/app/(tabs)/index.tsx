@@ -1,58 +1,151 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Badge, Banner, Button, Card, Caption, Empty, Heading, Title } from '../../src/components/ui';
 import CowLoader from '../../src/components/CowLoader';
+import { NotificationBanner } from '../../src/components/NotificationBanner';
+import { NotificationModal } from '../../src/components/NotificationModal';
 import { useAuth } from '../../src/lib/auth';
-import { cows as cowsApi, ApiError } from '../../src/api';
-import type { Cow } from '../../src/api/types';
+import { useTranslation } from '../../src/i18n';
+import { cows as cowsApi, alerts as alertsApi, ApiError } from '../../src/api';
+import type { Cow, AlertRead } from '../../src/api/types';
 import { cowLabel, cowSubtitle } from '../../src/lib/format';
 import { colors, font, radius, size, space } from '../../src/theme';
 
 export default function Home() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [herd, setHerd] = useState<Cow[]>([]);
+  const [userAlerts, setUserAlerts] = useState<AlertRead[]>([]);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const isFarmer = user?.role === 'farmer';
 
   const load = useCallback(async () => {
-    if (!isFarmer) { setLoading(false); return; }
     try {
-      setHerd(await cowsApi.myHerd());
+      if (isFarmer) {
+        setHerd(await cowsApi.myHerd());
+      }
+      const alertsRes = await alertsApi.my();
+      setUserAlerts(alertsRes.alerts);
       setError('');
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not load your herd.');
+      setError(e instanceof ApiError ? e.message : 'Could not load your records.');
     } finally {
       setLoading(false);
     }
   }, [isFarmer]);
 
+  const handleDismissAlert = async (alertId: string) => {
+    setUserAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    try {
+      await alertsApi.markRead(alertId);
+    } catch {
+      // ignore
+    }
+  };
+
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const firstName = (user?.name ?? '').split(' ')[0];
+  const unreadAlertsCount = userAlerts.filter((a) => !a.is_read).length;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.surface }}
-      contentContainerStyle={{ padding: space.lg, paddingTop: 64, paddingBottom: 40 }}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.pasture} />}
-    >
-      <Caption>{isFarmer ? 'Your farm' : roleLine(user?.role)}</Caption>
-      <Title>{firstName ? `Namaste, ${firstName}` : 'Kamadhenu'}</Title>
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.surface }}
+        contentContainerStyle={{ padding: space.lg, paddingTop: 64, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.pasture} />}
+      >
+        {/* Top Header Row with Greeting & Notification Bell */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space.xs }}>
+          <View style={{ flex: 1, paddingRight: space.md }}>
+            <Caption>{isFarmer ? t('home.yourFarm') : roleLine(user?.role)}</Caption>
+            <Title>{firstName ? t('home.greeting', { name: firstName }) : t('landing.heroTitle')}</Title>
+          </View>
 
-      <View style={{ height: space.xl }} />
-      <Banner message={error} />
+          <Pressable
+            onPress={() => setNotificationModalVisible(true)}
+            style={({ pressed }) => [
+              styles.bellBtn,
+              pressed && { opacity: 0.8, transform: [{ scale: 0.94 }] },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Feather name="bell" size={22} color={colors.ink} />
+            {unreadAlertsCount > 0 ? (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadAlertsCount > 9 ? '9+' : unreadAlertsCount}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.bellIdleDot} />
+            )}
+          </Pressable>
+        </View>
 
-      {isFarmer ? (
-        <FarmerHome herd={herd} loading={loading} onOpen={(id) => router.push(`/cow/${id}`)} onAdd={() => router.push('/cow/new')} />
-      ) : (
-        <StaffHome onLookup={() => router.push('/(tabs)/lookup')} />
-      )}
-    </ScrollView>
+        {/* Carousel for Active Urgent Alerts */}
+        <NotificationBanner
+          alerts={userAlerts}
+          onDismiss={handleDismissAlert}
+          onPressAlert={(alert) => {
+            if (alert.bovine_id) {
+              router.push(`/cow/${alert.bovine_id}`);
+            } else if (alert.complaint_id) {
+              router.push('/(tabs)/complaints');
+            }
+          }}
+        />
+
+        {/* Quick Status Bar when there are 0 unread alerts */}
+        {unreadAlertsCount === 0 && (
+          <Pressable
+            onPress={() => setNotificationModalVisible(true)}
+            style={styles.statusCard}
+          >
+            <View style={styles.statusIconWrap}>
+              <Feather name="shield" size={16} color={colors.pasture} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.statusTitle}>All Clear · Health Baseline Normal</Text>
+              <Text style={styles.statusSub}>No active mastitis or outbreak warnings</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+
+        <View style={{ height: space.md }} />
+        <Banner message={error} />
+
+        {isFarmer ? (
+          <FarmerHome herd={herd} loading={loading} onOpen={(id) => router.push(`/cow/${id}`)} onAdd={() => router.push('/cow/new')} />
+        ) : (
+          <StaffHome onLookup={() => router.push('/(tabs)/lookup')} />
+        )}
+      </ScrollView>
+
+      {/* Full Notification Center Modal */}
+      <NotificationModal
+        visible={notificationModalVisible}
+        alerts={userAlerts}
+        onDismiss={() => setNotificationModalVisible(false)}
+        onRefreshAlerts={load}
+        onPressAlert={(alert) => {
+          setNotificationModalVisible(false);
+          if (alert.bovine_id) {
+            router.push(`/cow/${alert.bovine_id}`);
+          } else if (alert.complaint_id) {
+            router.push('/(tabs)/complaints');
+          }
+        }}
+      />
+    </>
   );
 }
 
@@ -67,16 +160,18 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
   herd: Cow[]; loading: boolean; onOpen: (id: string) => void; onAdd: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
+
   if (loading && herd.length === 0) {
-    return <CowLoader label="Loading your herd…" />;
+    return <CowLoader label={t('common.loading')} />;
   }
 
   if (herd.length === 0) {
     return (
       <Empty
-        title="No animals yet"
-        body="Add your first cow or buffalo to start keeping its health and vaccination history in one place."
-        action={<Button label="Add an animal" onPress={onAdd} />}
+        title={t('home.emptyHerdTitle')}
+        body={t('home.emptyHerdSub')}
+        action={<Button label={t('home.addNewCow')} onPress={onAdd} />}
       />
     );
   }
@@ -86,11 +181,11 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
   return (
     <>
       <View style={{ flexDirection: 'row', gap: space.md, marginBottom: space.lg }}>
-        <Stat value={String(herd.length)} label="animals" />
-        <Stat value={String(milking)} label="in lactation" tone="milk" />
+        <Stat value={String(herd.length)} label={t('home.statAnimals')} />
+        <Stat value={String(milking)} label={t('home.statInLactation')} tone="milk" />
       </View>
 
-      <Heading>Your herd</Heading>
+      <Heading>{t('home.yourHerd')}</Heading>
       {herd.map((c) => (
         <Pressable key={c.id} onPress={() => onOpen(c.id)}>
           <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -105,7 +200,7 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>{cowLabel(c)}</Text>
               <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
-                {cowSubtitle(c) || 'Details not filled in'}
+                {cowSubtitle(c, t) || '—'}
               </Text>
             </View>
             {!c.is_active && <Badge label="Inactive" tone="warn" />}
@@ -114,11 +209,11 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
         </Pressable>
       ))}
 
-      <Button label="Add an animal" onPress={onAdd} variant="secondary" />
+      <Button label={t('home.addNewCow')} onPress={onAdd} variant="secondary" />
 
       {/* Farm IoT & Health Hub */}
       <View style={{ marginTop: space.xl }}>
-        <Heading>Farm Monitoring & Support</Heading>
+        <Heading>{t('home.farmMonitoringTitle')}</Heading>
       </View>
       <Pressable onPress={() => router.push('/farm/environment')}>
         <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -129,9 +224,11 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
             <Feather name="wind" size={20} color="#0369a1" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>Barn Environment Monitor</Text>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>
+              {t('home.barnMonitorTitle')}
+            </Text>
             <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
-              Track ventilation, humidity, bedding moisture & ammonia
+              {t('home.barnMonitorSub')}
             </Text>
           </View>
           <Feather name="chevron-right" size={20} color={colors.muted} />
@@ -147,9 +244,11 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
             <Feather name="alert-circle" size={20} color="#8A5D13" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>Veterinary Complaints</Text>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>
+              {t('home.vetComplaintsTitle')}
+            </Text>
             <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
-              Request doctor dispatch & track treatment status
+              {t('home.vetComplaintsSub')}
             </Text>
           </View>
           <Feather name="chevron-right" size={20} color={colors.muted} />
@@ -220,3 +319,83 @@ function Stat({ value, label, tone }: { value: string; label: string; tone?: 'mi
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    backgroundColor: colors.milk,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.sindoor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: colors.milk,
+  },
+  bellBadgeText: {
+    color: colors.milk,
+    fontSize: 10,
+    fontFamily: font.bodySemi,
+    fontWeight: '700',
+  },
+  bellIdleDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.pasture,
+  },
+  statusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.milk,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    marginTop: space.xs,
+    marginBottom: space.sm,
+    gap: space.sm,
+  },
+  statusIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.pastureSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusTitle: {
+    fontSize: 13,
+    fontFamily: font.bodySemi,
+    color: colors.ink,
+  },
+  statusSub: {
+    fontSize: 11,
+    fontFamily: font.body,
+    color: colors.muted,
+  },
+});
+

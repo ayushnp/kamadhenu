@@ -7,6 +7,7 @@ import CowLoader from '../../src/components/CowLoader';
 import { cows as cowsApi, sensors as sensorsApi, ApiError } from '../../src/api';
 import type { CowTelemetrySummary, CowWithHistory, MilkReading, WearableReading } from '../../src/api/types';
 import { useAuth } from '../../src/lib/auth';
+import { useTranslation } from '../../src/i18n';
 import { cowLabel, cowSubtitle, daysUntil, nextDue, openConditions, prettyDate } from '../../src/lib/format';
 import { colors, font, radius, size, space } from '../../src/theme';
 
@@ -16,6 +17,7 @@ export default function CowDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [cow, setCow] = useState<CowWithHistory | null>(null);
   const [telemetry, setTelemetry] = useState<CowTelemetrySummary | null>(null);
   const [tab, setTab] = useState<Tab>('health');
@@ -49,7 +51,7 @@ export default function CowDetail() {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: colors.surface }} contentContainerStyle={{ padding: space.lg, paddingTop: 64 }}>
         <Banner message={error || 'Animal not found.'} />
-        <Button label="Go back" onPress={() => router.back()} variant="secondary" />
+        <Button label={t('common.back')} onPress={() => router.back()} variant="secondary" />
       </ScrollView>
     );
   }
@@ -71,10 +73,12 @@ export default function CowDetail() {
     >
       <Pressable onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.lg }}>
         <Feather name="arrow-left" size={19} color={colors.bark} />
-        <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>Back</Text>
+        <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>
+          {t('common.back')}
+        </Text>
       </Pressable>
 
-      <Caption>{cow.pashu_aadhar ? `Pashu Aadhar ${cow.pashu_aadhar}` : cow.species}</Caption>
+      <Caption>{cow.pashu_aadhar ? `${t('cow.pashuAadhar')} ${cow.pashu_aadhar}` : cow.species}</Caption>
       <Title>{cowLabel(cow)}</Title>
       <Text style={{ fontFamily: font.body, fontSize: size.base, color: colors.muted, marginTop: 4 }}>
         {cowSubtitle(cow) || 'Details not filled in'}
@@ -82,22 +86,22 @@ export default function CowDetail() {
 
       <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md, marginBottom: space.md, flexWrap: 'wrap' }}>
         {open.length > 0
-          ? <Badge label={`${open.length} open condition${open.length > 1 ? 's' : ''}`} tone="risk" />
-          : <Badge label="No open conditions" tone="good" />}
+          ? <Badge label={t('cow.openConditions', { count: open.length })} tone="risk" />
+          : <Badge label={t('cow.noOpenConditions')} tone="good" />}
         {dueIn != null && (
           <Badge
-            label={dueIn < 0 ? `Vaccine overdue by ${Math.abs(dueIn)} d` : `Next vaccine in ${dueIn} d`}
+            label={dueIn < 0 ? t('cow.vaccineOverdue', { days: Math.abs(dueIn) }) : t('cow.vaccineDueSoon', { days: dueIn })}
             tone={dueIn < 0 ? 'risk' : dueIn < 30 ? 'warn' : 'neutral'}
           />
         )}
-        {(cow.lactation_number ?? 0) > 0 && <Badge label={`Lactation ${cow.lactation_number}`} tone="neutral" />}
-        {mastitisQuarter && <Badge label={`Mastitis risk (${mastitisQuarter.quarter})`} tone="risk" />}
+        {(cow.lactation_number ?? 0) > 0 && <Badge label={t('cow.lactation', { num: cow.lactation_number ?? 1 })} tone="neutral" />}
+        {mastitisQuarter && <Badge label={t('cow.mastitisQuarterRisk', { quarter: mastitisQuarter.quarter })} tone="risk" />}
       </View>
 
       {/* Quick Action: Raise Complaint */}
       <View style={{ marginBottom: space.lg }}>
         <Button
-          label="🚨 Raise Health Complaint"
+          label={t('cow.raiseComplaintBtn')}
           onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
           variant="secondary"
         />
@@ -109,10 +113,10 @@ export default function CowDetail() {
         value={tab}
         onChange={setTab}
         options={[
-          { value: 'health', label: `Health (${cow.health_records.length})` },
-          { value: 'vaccines', label: `Vaccines (${cow.vaccinations.length})` },
-          { value: 'telemetry', label: `Sensors (${(telemetry?.wearable_records_count ?? 0) + (telemetry?.milk_records_count ?? 0)})` },
-          { value: 'identity', label: 'Identity' },
+          { value: 'health', label: t('cow.tabHealth', { count: cow.health_records.length }) },
+          { value: 'vaccines', label: t('cow.tabVaccines', { count: cow.vaccinations.length }) },
+          { value: 'telemetry', label: t('cow.tabSensors', { count: (telemetry?.wearable_records_count ?? 0) + (telemetry?.milk_records_count ?? 0) }) },
+          { value: 'identity', label: t('cow.tabIdentity') },
         ]}
       />
 
@@ -177,21 +181,21 @@ export default function CowDetail() {
       {tab === 'telemetry' && (
         <>
           {/* Collar Wearable Telemetry */}
-          <Heading>Collar Vitals</Heading>
+          <Heading>{t('cow.collarVitals')}</Heading>
           {latestWearable ? (
             <Card>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm }}>
                 <Text style={{ fontFamily: font.bodyMid, fontSize: size.xs, color: colors.muted }}>
-                  LATEST SYNC: {prettyDate(latestWearable.recorded_at)}
+                  {t('cow.latestSync', { time: prettyDate(latestWearable.recorded_at) })}
                 </Text>
                 {latestWearable.latitude != null && (
-                  <Badge label="GPS Active" tone="good" />
+                  <Badge label={t('cow.gpsActive')} tone="good" />
                 )}
               </View>
 
               <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.sm }}>
                 <TelemetryCard
-                  title="Body Temp"
+                  title={t('cow.bodyTemp')}
                   value={latestWearable.body_temperature != null ? `${latestWearable.body_temperature.toFixed(1)}°C` : '—'}
                   status={
                     latestWearable.body_temperature == null
@@ -200,42 +204,42 @@ export default function CowDetail() {
                       ? 'risk'
                       : 'good'
                   }
-                  hint="Normal: 38.0–39.2°C"
+                  hint={t('cow.tempNormalHint')}
                 />
                 <TelemetryCard
-                  title="Rumination"
+                  title={t('cow.rumination')}
                   value={`${latestWearable.rumination_minutes.toFixed(0)} min`}
                   status={latestWearable.rumination_minutes < 15 ? 'warn' : 'good'}
-                  hint="Chewing index"
+                  hint={t('cow.ruminationHint')}
                 />
               </View>
 
               <View style={{ flexDirection: 'row', gap: space.sm }}>
                 <TelemetryCard
-                  title="Activity Index"
+                  title={t('cow.activityIndex')}
                   value={latestWearable.activity_index.toFixed(1)}
                   status="neutral"
-                  hint="Movement magnitude"
+                  hint={t('cow.activityHint')}
                 />
                 <TelemetryCard
-                  title="Lying Time"
+                  title={t('cow.lyingTime')}
                   value={latestWearable.lying_time_minutes != null ? `${latestWearable.lying_time_minutes.toFixed(0)} min` : '—'}
                   status="neutral"
-                  hint="Rest period"
+                  hint={t('cow.lyingHint')}
                 />
               </View>
             </Card>
           ) : (
             <Card>
               <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted }}>
-                No collar readings received yet for this animal.
+                {t('cow.noCollarData')}
               </Text>
             </Card>
           )}
 
           {/* Milk Analyzer Telemetry */}
           <View style={{ marginTop: space.lg }}>
-            <Heading>Milking & Udder Analytics</Heading>
+            <Heading>{t('cow.milkingAnalytics')}</Heading>
           </View>
           {recentMilk.length > 0 ? (
             <>
@@ -244,14 +248,14 @@ export default function CowDetail() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                     <Feather name="alert-triangle" size={17} color={colors.sindoor} style={{ marginRight: 6 }} />
                     <Text style={{ fontFamily: font.bodySemi, fontSize: size.sm, color: colors.sindoor }}>
-                      Subclinical Mastitis Warning detected in {mastitisQuarter.quarter} quarter!
+                      {t('cow.subclinicalWarning', { quarter: mastitisQuarter.quarter })}
                     </Text>
                   </View>
                   <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark, marginBottom: space.sm }}>
-                    Electrical conductivity ({mastitisQuarter.electrical_conductivity.toFixed(2)} mS/cm) or pH ({mastitisQuarter.ph.toFixed(2)}) is outside normal threshold.
+                    {t('cow.subclinicalSub', { ec: mastitisQuarter.electrical_conductivity.toFixed(2), ph: mastitisQuarter.ph.toFixed(2) })}
                   </Text>
                   <Button
-                    label="Raise Urgent Complaint"
+                    label={t('cow.raiseUrgentComplaint')}
                     onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
                   />
                 </Card>

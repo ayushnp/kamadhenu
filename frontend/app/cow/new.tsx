@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Banner, Button, Caption, Field, Screen, Segmented, Title } from '../../src/components/ui';
 import { cows as cowsApi, ApiError } from '../../src/api';
+import { useTranslation } from '../../src/i18n';
 import { colors, font, size, space } from '../../src/theme';
 
 const blank = {
@@ -14,6 +15,7 @@ const blank = {
 export default function CowForm() {
   const { editId } = useLocalSearchParams<{ editId?: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const [species, setSpecies] = useState<'cattle' | 'buffalo'>('cattle');
   const [f, setF] = useState(blank);
   const [error, setError] = useState('');
@@ -81,11 +83,13 @@ export default function CowForm() {
       <Screen>
         <Pressable onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 40, marginBottom: space.lg }}>
           <Feather name="arrow-left" size={19} color={colors.bark} />
-          <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>Back</Text>
+          <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>
+            {t('common.back')}
+          </Text>
         </Pressable>
 
-        <Caption>{editing ? 'Update details' : 'New animal'}</Caption>
-        <Title>{editing ? 'Edit animal' : 'Add an animal'}</Title>
+        <Caption>{editing ? t('cowForm.editAnimalCaption') : t('cowForm.newAnimalCaption')}</Caption>
+        <Title>{editing ? t('cowForm.editAnimalTitle') : t('cowForm.newAnimalTitle')}</Title>
         <View style={{ height: space.xl }} />
 
         <Banner message={error} />
@@ -93,19 +97,75 @@ export default function CowForm() {
         <Segmented
           value={species}
           onChange={setSpecies}
-          options={[{ value: 'cattle', label: 'Cow' }, { value: 'buffalo', label: 'Buffalo' }]}
+          options={[
+            { value: 'cattle', label: t('cowForm.speciesCow') },
+            { value: 'buffalo', label: t('cowForm.speciesBuffalo') },
+          ]}
         />
 
-        <Field label="Name" value={f.name} onChangeText={set('name')} placeholder="Gauri" />
-        <Field label="Ear tag" value={f.tag_number} onChangeText={set('tag_number')} autoCapitalize="characters" placeholder="KA-114-B" />
-        <Field label="Pashu Aadhar" value={f.pashu_aadhar} onChangeText={set('pashu_aadhar')} keyboardType="number-pad" maxLength={12} placeholder="12-digit number" hint="The UID printed on the INAPH card, if the animal has one." />
-        <Field label="Barcode" value={f.barcode} onChangeText={set('barcode')} autoCapitalize="characters" placeholder="Farm QR or barcode" />
-        <Field label="Breed" value={f.breed} onChangeText={set('breed')} placeholder="HF, Jersey, Sahiwal, Gir…" />
-        <Field label="Age in years" value={f.age_years} onChangeText={set('age_years')} keyboardType="decimal-pad" placeholder="4.5" />
-        <Field label="Number of calves" value={f.calf_number} onChangeText={set('calf_number')} keyboardType="number-pad" placeholder="2" />
-        <Field label="Lactation number" value={f.lactation_number} onChangeText={set('lactation_number')} keyboardType="number-pad" placeholder="2" hint="Which lactation the animal is in now. 0 if dry." />
+        <Field
+          label={t('cowForm.nameLabel')}
+          value={f.name}
+          onChangeText={set('name')}
+          placeholder={t('cowForm.namePlaceholder')}
+        />
+        <Field
+          label={t('cowForm.earTagLabel')}
+          value={f.tag_number}
+          onChangeText={set('tag_number')}
+          autoCapitalize="characters"
+          placeholder={t('cowForm.earTagPlaceholder')}
+        />
+        <Field
+          label={t('cowForm.pashuAadharLabel')}
+          value={f.pashu_aadhar}
+          onChangeText={set('pashu_aadhar')}
+          keyboardType="number-pad"
+          maxLength={12}
+          placeholder={t('cowForm.pashuAadharPlaceholder')}
+          hint={t('cowForm.pashuAadharHint')}
+        />
+        <Field
+          label={t('cowForm.barcodeLabel')}
+          value={f.barcode}
+          onChangeText={set('barcode')}
+          autoCapitalize="characters"
+          placeholder={t('cowForm.barcodePlaceholder')}
+        />
+        <Field
+          label={t('cowForm.breedLabel')}
+          value={f.breed}
+          onChangeText={set('breed')}
+          placeholder={t('cowForm.breedPlaceholder')}
+        />
+        <Field
+          label={t('cowForm.ageLabel')}
+          value={f.age_years}
+          onChangeText={set('age_years')}
+          keyboardType="decimal-pad"
+          placeholder="4.5"
+        />
+        <Field
+          label={t('cowForm.calfNumberLabel')}
+          value={f.calf_number}
+          onChangeText={set('calf_number')}
+          keyboardType="number-pad"
+          placeholder="2"
+        />
+        <Field
+          label={t('cowForm.lactationLabel')}
+          value={f.lactation_number}
+          onChangeText={set('lactation_number')}
+          keyboardType="number-pad"
+          placeholder="2"
+          hint={t('cowForm.lactationHint')}
+        />
 
-        <Button label={editing ? 'Save changes' : 'Add animal'} onPress={submit} loading={busy} />
+        <Button
+          label={editing ? t('cowForm.submitSave') : t('cowForm.submitAdd')}
+          onPress={submit}
+          loading={busy}
+        />
       </Screen>
     </KeyboardAvoidingView>
   );

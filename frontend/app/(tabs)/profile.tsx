@@ -4,11 +4,13 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Badge, Banner, Button, Caption, Card, Field, Screen, Title } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
+import { useTranslation, SUPPORTED_LANGUAGES } from '../../src/i18n';
 import { users as usersApi, ApiError, API_URL } from '../../src/api';
-import { colors, font, size, space } from '../../src/theme';
+import { colors, font, radius, size, space } from '../../src/theme';
 
 export default function Profile() {
   const { user, signOut, refresh } = useAuth();
+  const { t, locale, setLocale } = useTranslation();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
@@ -43,16 +45,16 @@ export default function Profile() {
   }
 
   function confirmSignOut() {
-    Alert.alert('Sign out?', 'You will need your password to sign in again.', [
-      { text: 'Stay signed in', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+    Alert.alert(t('profile.signOutConfirmTitle'), t('profile.signOutConfirmBody'), [
+      { text: t('profile.staySignedIn'), style: 'cancel' },
+      { text: t('profile.signOut'), style: 'destructive', onPress: () => signOut() },
     ]);
   }
 
   return (
     <Screen>
       <View style={{ marginTop: 48, marginBottom: space.xl }}>
-        <Caption>Your account</Caption>
+        <Caption>{t('profile.yourAccount')}</Caption>
         <Title>{user.name}</Title>
         <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
           <Badge label={roleName(user.role)} tone="good" />
@@ -64,23 +66,23 @@ export default function Profile() {
 
       {editing ? (
         <Card>
-          <Field label="Name" value={f.name} onChangeText={set('name')} />
-          <Field label="Phone" value={f.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
-          <Field label="Village or town" value={f.place} onChangeText={set('place')} />
+          <Field label={t('auth.nameLabel')} value={f.name} onChangeText={set('name')} />
+          <Field label={t('profile.phone')} value={f.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
+          <Field label={t('profile.village')} value={f.place} onChangeText={set('place')} />
           {user.role === 'farmer' && (
-            <Field label="How many animals" value={f.animals} onChangeText={set('animals')} keyboardType="number-pad" />
+            <Field label={t('profile.animalsDeclared')} value={f.animals} onChangeText={set('animals')} keyboardType="number-pad" />
           )}
-          <Button label="Save changes" onPress={save} loading={busy} />
-          <Button label="Cancel" onPress={() => setEditing(false)} variant="ghost" />
+          <Button label={t('common.saveChanges')} onPress={save} loading={busy} />
+          <Button label={t('common.cancel')} onPress={() => setEditing(false)} variant="ghost" />
         </Card>
       ) : (
         <Card>
-          <Line label="Phone" value={user.phone ?? '—'} />
-          <Line label="Email" value={user.email ?? '—'} />
+          <Line label={t('profile.phone')} value={user.phone ?? '—'} />
+          <Line label={t('profile.email')} value={user.email ?? '—'} />
           {user.role === 'farmer' ? (
             <>
-              <Line label="Village or town" value={user.place ?? '—'} />
-              <Line label="Animals declared" value={user.number_of_animals != null ? String(user.number_of_animals) : '—'} />
+              <Line label={t('profile.village')} value={user.place ?? '—'} />
+              <Line label={t('profile.animalsDeclared')} value={user.number_of_animals != null ? String(user.number_of_animals) : '—'} />
             </>
           ) : (
             <>
@@ -89,9 +91,87 @@ export default function Profile() {
               <Line label="Jurisdiction" value={user.jurisdiction ?? '—'} />
             </>
           )}
-          <Button label="Edit details" onPress={() => setEditing(true)} variant="secondary" />
+          <Button label={t('profile.editProfile')} onPress={() => setEditing(true)} variant="secondary" />
         </Card>
       )}
+
+      {/* Language Preferences Card */}
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space.sm }}>
+          <Feather name="globe" size={18} color={colors.pasture} style={{ marginRight: space.sm }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>
+              {t('profile.languageSettingTitle')}
+            </Text>
+            <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted }}>
+              {t('profile.languageSettingSub')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ gap: space.xs, marginTop: space.xs }}>
+          {SUPPORTED_LANGUAGES.map((lang) => {
+            const isSelected = locale === lang.code;
+            return (
+              <Pressable
+                key={lang.code}
+                onPress={() => setLocale(lang.code)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  borderRadius: radius.md,
+                  borderWidth: 1.5,
+                  borderColor: isSelected ? colors.pasture : colors.line,
+                  backgroundColor: isSelected ? colors.pastureSoft : colors.milk,
+                }}
+              >
+                <View>
+                  <Text
+                    style={{
+                      fontFamily: isSelected ? font.bodySemi : font.body,
+                      fontSize: size.base,
+                      color: isSelected ? colors.pasture : colors.ink,
+                    }}
+                  >
+                    {lang.label} {lang.code !== 'en' ? `(${lang.englishLabel})` : ''}
+                  </Text>
+                  <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted }}>
+                    {lang.subtext}
+                  </Text>
+                </View>
+
+                {isSelected ? (
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      backgroundColor: colors.pasture,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Feather name="check" size={14} color={colors.milk} />
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      borderWidth: 1.5,
+                      borderColor: colors.line,
+                    }}
+                  />
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Card>
 
       {user.role === 'authority' && (
         <Pressable onPress={() => router.push('/staff')}>
@@ -108,7 +188,7 @@ export default function Profile() {
         </Pressable>
       )}
 
-      <Button label="Sign out" onPress={confirmSignOut} variant="ghost" />
+      <Button label={t('profile.signOut')} onPress={confirmSignOut} variant="ghost" />
       <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted, textAlign: 'center' }}>
         Connected to {API_URL}
       </Text>

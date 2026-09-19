@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { Badge, Banner, Button, Card, Caption, Empty, Segmented, Title } from '../../src/components/ui';
 import CowLoader from '../../src/components/CowLoader';
 import { useAuth } from '../../src/lib/auth';
+import { useTranslation } from '../../src/i18n';
 import { complaints as complaintsApi, ApiError } from '../../src/api';
 import type { Complaint, ComplaintPriority, ComplaintStatus } from '../../src/api/types';
 import { prettyDate } from '../../src/lib/format';
@@ -14,6 +15,7 @@ type StatusFilter = 'all' | 'open' | 'assigned' | 'in_progress' | 'resolved';
 
 export default function ComplaintsScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [items, setItems] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,17 +53,17 @@ export default function ComplaintsScreen() {
     >
       <Caption>
         {isFarmer
-          ? 'Animal healthcare requests'
+          ? t('complaints.headerFarmer')
           : isDoctorOrInspector
-          ? 'Field response inbox'
+          ? t('complaints.headerDoctor')
           : 'District complaint oversight'}
       </Caption>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Title>Complaints</Title>
+        <Title>{t('complaints.title')}</Title>
         {isFarmer && (
           <View style={{ minWidth: 90 }}>
             <Button
-              label="+ New"
+              label={t('complaints.newComplaint')}
               onPress={() => router.push('/complaints/new')}
             />
           </View>
@@ -73,9 +75,9 @@ export default function ComplaintsScreen() {
 
       {/* Overview Stat Counters */}
       <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.lg }}>
-        <StatCounter value={String(openCount)} label="Open / Assigned" tone="warn" />
-        <StatCounter value={String(inProgressCount)} label="In Progress" tone="info" />
-        <StatCounter value={String(resolvedCount)} label="Resolved" tone="good" />
+        <StatCounter value={String(openCount)} label={t('complaints.filterOpen')} tone="warn" />
+        <StatCounter value={String(inProgressCount)} label={t('complaints.filterInProgress')} tone="info" />
+        <StatCounter value={String(resolvedCount)} label={t('complaints.filterResolved')} tone="good" />
       </View>
 
       {/* Filter Tabs */}
@@ -83,27 +85,23 @@ export default function ComplaintsScreen() {
         value={filter}
         onChange={setFilter}
         options={[
-          { value: 'all', label: 'All' },
-          { value: 'open', label: 'Open' },
-          { value: 'assigned', label: 'Assigned' },
-          { value: 'in_progress', label: 'Active' },
-          { value: 'resolved', label: 'Resolved' },
+          { value: 'all', label: t('complaints.filterAll') },
+          { value: 'open', label: t('complaints.filterOpen') },
+          { value: 'assigned', label: t('complaints.filterAssigned') },
+          { value: 'in_progress', label: t('complaints.filterInProgress') },
+          { value: 'resolved', label: t('complaints.filterResolved') },
         ]}
       />
 
       {loading && items.length === 0 ? (
-        <CowLoader label="Loading complaints…" />
+        <CowLoader label={t('common.loading')} />
       ) : items.length === 0 ? (
         <Empty
-          title={filter === 'all' ? 'No complaints' : `No ${filter.replace('_', ' ')} complaints`}
-          body={
-            isFarmer
-              ? 'If any animal falls ill or exhibits unusual behavior, raise a complaint for GPS auto-dispatch.'
-              : 'Complaints assigned to you or in your jurisdiction will appear here.'
-          }
+          title={t('complaints.emptyTitle')}
+          body={t('complaints.emptySub')}
           action={
             isFarmer ? (
-              <Button label="Raise a complaint" onPress={() => router.push('/complaints/new')} />
+              <Button label={t('complaints.emptyAction')} onPress={() => router.push('/complaints/new')} />
             ) : undefined
           }
         />
