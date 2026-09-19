@@ -54,10 +54,10 @@ export function NotificationModal({
     }
   };
 
-  const handleSimulateAlert = async () => {
+  const handleSimulateAlert = async (kind?: string) => {
     setSimulating(true);
     try {
-      await alertsApi.simulate();
+      await alertsApi.simulate(kind);
       onRefreshAlerts();
     } catch {
       // ignore
@@ -67,7 +67,13 @@ export function NotificationModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+      onRequestClose={onDismiss}
+    >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           {/* Header */}
@@ -79,13 +85,15 @@ export function NotificationModal({
               <View>
                 <Text style={styles.headerTitle}>Notifications & Alerts</Text>
                 <Text style={styles.headerSub}>
-                  {unreadAlerts.length} unread {unreadAlerts.length === 1 ? 'alert' : 'alerts'}
+                  {unreadAlerts.length > 0
+                    ? `${unreadAlerts.length} unread updates requiring attention`
+                    : 'All clear — no critical events'}
                 </Text>
               </View>
             </View>
 
             <Pressable onPress={onDismiss} hitSlop={12} style={styles.closeBtn}>
-              <Feather name="x" size={22} color={colors.ink} />
+              <Feather name="x" size={22} color={colors.bark} />
             </Pressable>
           </View>
 
@@ -131,32 +139,52 @@ export function NotificationModal({
                 <Text style={styles.emptyTitle}>All Clear!</Text>
                 <Text style={styles.emptySub}>
                   {filter === 'unread'
-                    ? 'No unread notifications right now.'
-                    : 'No health alerts or disease outbreaks detected in your herd.'}
+                    ? 'You have read all your notifications and risk warnings.'
+                    : 'No health alerts, barn hazard notices, or assigned cases on file.'}
                 </Text>
 
-                <Pressable
-                  onPress={handleSimulateAlert}
-                  disabled={simulating}
-                  style={styles.demoBtn}
-                >
-                  {simulating ? (
-                    <ActivityIndicator color={colors.milk} size="small" />
-                  ) : (
-                    <>
-                      <Feather name="zap" size={16} color={colors.milk} style={{ marginRight: 6 }} />
-                      <Text style={styles.demoBtnText}>Generate Test Alert</Text>
-                    </>
-                  )}
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.lg }}>
+                  <Pressable
+                    onPress={() => handleSimulateAlert('mastitis')}
+                    disabled={simulating}
+                    style={styles.demoBtn}
+                  >
+                    {simulating ? (
+                      <ActivityIndicator color={colors.milk} size="small" />
+                    ) : (
+                      <>
+                        <Feather name="zap" size={14} color={colors.milk} style={{ marginRight: 6 }} />
+                        <Text style={styles.demoBtnText}>Test Mastitis Alert</Text>
+                      </>
+                    )}
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => handleSimulateAlert('environment')}
+                    disabled={simulating}
+                    style={[styles.demoBtn, { backgroundColor: colors.marigold }]}
+                  >
+                    {simulating ? (
+                      <ActivityIndicator color={colors.milk} size="small" />
+                    ) : (
+                      <>
+                        <Feather name="wind" size={14} color={colors.milk} style={{ marginRight: 6 }} />
+                        <Text style={styles.demoBtnText}>Test Barn Hazard</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             ) : (
               displayedAlerts.map((alert) => {
                 const isCritical = alert.severity === 'critical';
                 const isOutbreak = alert.alert_type === 'outbreak_warning';
                 const isCase = alert.alert_type === 'case_assigned';
+                const isEnvironment = alert.alert_type === 'barn_environment_hazard';
 
-                const iconName = isOutbreak
+                const iconName = isEnvironment
+                  ? 'wind'
+                  : isOutbreak
                   ? 'alert-triangle'
                   : isCase
                   ? 'clipboard'
@@ -164,9 +192,11 @@ export function NotificationModal({
 
                 const accentColor = isCritical
                   ? colors.sindoor
-                  : isOutbreak
+                  : (isOutbreak || isEnvironment)
                   ? colors.marigold
                   : colors.pasture;
+
+                const badgeBg = isCritical ? '#FEF2F2' : (isOutbreak || isEnvironment) ? '#FFFBEB' : '#F0FDF4';
 
                 return (
                   <Pressable
@@ -181,10 +211,10 @@ export function NotificationModal({
                     ]}
                   >
                     <View style={styles.cardHeader}>
-                      <View style={[styles.typeBadge, { backgroundColor: isCritical ? '#FEF2F2' : '#F0FDF4' }]}>
+                      <View style={[styles.typeBadge, { backgroundColor: badgeBg }]}>
                         <Feather name={iconName} size={14} color={accentColor} style={{ marginRight: 4 }} />
                         <Text style={[styles.typeBadgeText, { color: accentColor }]}>
-                          {alert.severity.toUpperCase()}
+                          {isEnvironment ? 'BARN HAZARD' : alert.severity.toUpperCase()}
                         </Text>
                       </View>
 
@@ -213,7 +243,7 @@ export function NotificationModal({
                         </Pressable>
                       )}
 
-                      {(alert.bovine_id || alert.complaint_id) && (
+                      {(alert.bovine_id || alert.complaint_id || isEnvironment) && (
                         <Pressable
                           onPress={() => {
                             if (!alert.is_read) handleMarkRead(alert.id);
@@ -222,7 +252,11 @@ export function NotificationModal({
                           style={styles.inspectAction}
                         >
                           <Text style={styles.inspectText}>
-                            {alert.bovine_id ? 'View Cow Health →' : 'View Complaint →'}
+                            {alert.bovine_id
+                              ? 'View Cow Health →'
+                              : alert.complaint_id
+                              ? 'View Complaint →'
+                              : 'Open Barn Monitor →'}
                           </Text>
                         </Pressable>
                       )}
@@ -234,20 +268,25 @@ export function NotificationModal({
 
             {/* Test Trigger Button for developers / demo */}
             {displayedAlerts.length > 0 && (
-              <Pressable
-                onPress={handleSimulateAlert}
-                disabled={simulating}
-                style={styles.secondaryDemoBtn}
-              >
-                {simulating ? (
-                  <ActivityIndicator color={colors.pasture} size="small" />
-                ) : (
-                  <>
-                    <Feather name="plus-circle" size={14} color={colors.pasture} style={{ marginRight: 6 }} />
-                    <Text style={styles.secondaryDemoBtnText}>Trigger Another Demo Alert</Text>
-                  </>
-                )}
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
+                <Pressable
+                  onPress={() => handleSimulateAlert('mastitis')}
+                  disabled={simulating}
+                  style={[styles.secondaryDemoBtn, { flex: 1 }]}
+                >
+                  <Feather name="plus-circle" size={14} color={colors.pasture} style={{ marginRight: 6 }} />
+                  <Text style={styles.secondaryDemoBtnText}>+ Mastitis Alert</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => handleSimulateAlert('environment')}
+                  disabled={simulating}
+                  style={[styles.secondaryDemoBtn, { flex: 1 }]}
+                >
+                  <Feather name="wind" size={14} color={colors.marigold} style={{ marginRight: 6 }} />
+                  <Text style={[styles.secondaryDemoBtnText, { color: colors.marigold }]}>+ Barn Hazard</Text>
+                </Pressable>
+              </View>
             )}
           </ScrollView>
         </View>

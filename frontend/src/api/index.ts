@@ -112,8 +112,11 @@ export const alerts = {
     request<{ status: string; message: string }>('/alerts/push-token', { method: 'POST', body: { push_token } }),
   outbreaks: () =>
     request<import('./types').OutbreakCluster[]>('/alerts/outbreaks'),
-  simulate: () =>
-    request<import('./types').AlertRead>('/alerts/simulate', { method: 'POST' }),
+  simulate: (alertKind?: string) =>
+    request<import('./types').AlertRead>('/alerts/simulate', {
+      method: 'POST',
+      query: alertKind ? { alert_kind: alertKind } : undefined,
+    }),
 };
 
 export * from './types';

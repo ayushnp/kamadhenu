@@ -64,6 +64,8 @@ def _bg_score_cow(cow_id: uuid.UUID) -> None:
         with Session(engine) as session:
             result = score_cow(cow_id, session, window_days=7)
             save_risk_score(cow_id, result, session)
+            from app.services.notification_service import check_and_trigger_risk_alert
+            check_and_trigger_risk_alert(cow_id, result.score, session)
     except Exception:
         pass
 

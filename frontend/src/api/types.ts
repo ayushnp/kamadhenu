@@ -259,7 +259,7 @@ export interface CowTelemetrySummary {
 
 /* ── Alerts & Notifications ────────────────────────────────────────────────── */
 export type AlertSeverity = 'info' | 'warning' | 'critical';
-export type AlertType = 'high_risk_mastitis' | 'case_assigned' | 'outbreak_warning' | 'vaccine_overdue';
+export type AlertType = 'high_risk_mastitis' | 'case_assigned' | 'outbreak_warning' | 'vaccine_overdue' | 'barn_environment_hazard';
 
 export interface AlertRead {
   id: string;

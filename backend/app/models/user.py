@@ -48,6 +48,9 @@ class User(SQLModel, table=True):
     latitude: Optional[float] = Field(default=None)
     longitude: Optional[float] = Field(default=None)
 
+    # ─── Push Notifications ───────────────────────────────────────────────────
+    push_token: Optional[str] = Field(default=None, max_length=255)  # ExponentPushToken[...]
+
     # ─── Metadata ─────────────────────────────────────────────────────────────
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

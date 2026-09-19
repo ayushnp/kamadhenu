@@ -30,10 +30,18 @@ else:
 
 
 def create_db_and_tables() -> None:
-    """Create all tables defined by SQLModel metadata.
+    """Create all tables defined by SQLModel metadata and run minor column migrations.
     Called at application startup via lifespan handler.
     """
     SQLModel.metadata.create_all(engine)
+
+    # In PostgreSQL, create_all does not alter existing tables.
+    # Safely ensure newly added columns exist:
+    if not _is_sqlite:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token VARCHAR(255);"))
+            conn.commit()
 
 
 def get_session() -> Generator[Session, None, None]:

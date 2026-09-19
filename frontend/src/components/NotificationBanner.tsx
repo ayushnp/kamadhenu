@@ -28,8 +28,11 @@ export function NotificationBanner({ alerts, onDismiss, onPressAlert }: Notifica
           const isCritical = alert.severity === 'critical';
           const isOutbreak = alert.alert_type === 'outbreak_warning';
           const isCaseAssigned = alert.alert_type === 'case_assigned';
+          const isEnvironment = alert.alert_type === 'barn_environment_hazard';
 
-          const iconName = isOutbreak
+          const iconName = isEnvironment
+            ? 'thermometer'
+            : isOutbreak
             ? 'warning'
             : isCaseAssigned
             ? 'clipboard'
@@ -37,9 +40,9 @@ export function NotificationBanner({ alerts, onDismiss, onPressAlert }: Notifica
             ? 'alert-circle'
             : 'information-circle';
 
-          const cardBg = isCritical ? '#FEF2F2' : isOutbreak ? '#FFFBEB' : '#F0FDF4';
-          const borderColor = isCritical ? '#FCA5A5' : isOutbreak ? '#FCD34D' : '#86EFAC';
-          const accentColor = isCritical ? colors.sindoor : isOutbreak ? '#D97706' : colors.pasture;
+          const cardBg = isCritical ? '#FEF2F2' : (isOutbreak || isEnvironment) ? '#FFFBEB' : '#F0FDF4';
+          const borderColor = isCritical ? '#FCA5A5' : (isOutbreak || isEnvironment) ? '#FCD34D' : '#86EFAC';
+          const accentColor = isCritical ? colors.sindoor : (isOutbreak || isEnvironment) ? '#D97706' : colors.pasture;
 
           return (
             <Pressable
@@ -54,7 +57,9 @@ export function NotificationBanner({ alerts, onDismiss, onPressAlert }: Notifica
                 <View style={styles.iconTitleRow}>
                   <Ionicons name={iconName} size={20} color={accentColor} style={styles.icon} />
                   <Text style={[styles.badgeText, { color: accentColor }]}>
-                    {isOutbreak
+                    {isEnvironment
+                      ? (t('alerts.barnHazard') || 'Barn Hazard')
+                      : isOutbreak
                       ? t('alerts.outbreakWarning')
                       : isCaseAssigned
                       ? t('alerts.caseAssigned')

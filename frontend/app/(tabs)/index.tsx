@@ -13,6 +13,85 @@ import type { Cow, AlertRead } from '../../src/api/types';
 import { cowLabel, cowSubtitle } from '../../src/lib/format';
 import { colors, font, radius, size, space } from '../../src/theme';
 
+const styles = StyleSheet.create({
+  bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    backgroundColor: colors.milk,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.sindoor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: colors.milk,
+  },
+  bellBadgeText: {
+    color: colors.milk,
+    fontSize: 10,
+    fontFamily: font.bodySemi,
+    fontWeight: '700',
+  },
+  bellIdleDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.pasture,
+  },
+  statusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.milk,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    marginTop: space.xs,
+    marginBottom: space.sm,
+    gap: space.sm,
+  },
+  statusIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.pastureSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusTitle: {
+    fontSize: 13,
+    fontFamily: font.bodySemi,
+    color: colors.ink,
+  },
+  statusSub: {
+    fontSize: 11,
+    fontFamily: font.body,
+    color: colors.muted,
+  },
+});
+
 export default function Home() {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -99,6 +178,8 @@ export default function Home() {
               router.push(`/cow/${alert.bovine_id}`);
             } else if (alert.complaint_id) {
               router.push('/(tabs)/complaints');
+            } else if (alert.alert_type === 'barn_environment_hazard') {
+              router.push('/farm/environment');
             }
           }}
         />
@@ -142,6 +223,8 @@ export default function Home() {
             router.push(`/cow/${alert.bovine_id}`);
           } else if (alert.complaint_id) {
             router.push('/(tabs)/complaints');
+          } else if (alert.alert_type === 'barn_environment_hazard') {
+            router.push('/farm/environment');
           }
         }}
       />
@@ -319,83 +402,4 @@ function Stat({ value, label, tone }: { value: string; label: string; tone?: 'mi
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  bellBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-    backgroundColor: colors.milk,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.sindoor,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 1.5,
-    borderColor: colors.milk,
-  },
-  bellBadgeText: {
-    color: colors.milk,
-    fontSize: 10,
-    fontFamily: font.bodySemi,
-    fontWeight: '700',
-  },
-  bellIdleDot: {
-    position: 'absolute',
-    top: 9,
-    right: 10,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: colors.pasture,
-  },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.milk,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-    marginTop: space.xs,
-    marginBottom: space.sm,
-    gap: space.sm,
-  },
-  statusIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.pill,
-    backgroundColor: colors.pastureSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusTitle: {
-    fontSize: 13,
-    fontFamily: font.bodySemi,
-    color: colors.ink,
-  },
-  statusSub: {
-    fontSize: 11,
-    fontFamily: font.body,
-    color: colors.muted,
-  },
-});
 

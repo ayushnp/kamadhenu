@@ -45,7 +45,10 @@ export default function FarmEnvironmentScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const latest = history.length > 0 ? history[0] : null;
+  const sortedHistory = [...history].sort(
+    (a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime()
+  );
+  const latest = sortedHistory.length > 0 ? sortedHistory[0] : null;
 
   async function handleRecord() {
     if (!f.ambient_temperature || !f.humidity || !f.bedding_moisture) {
@@ -65,7 +68,15 @@ export default function FarmEnvironmentScreen() {
         hygiene_score: parseInt(f.hygiene_score, 10) || 2,
       });
 
-      setNotice('Barn environment telemetry logged successfully.');
+      const ammonia = f.ammonia_ppm ? parseFloat(f.ammonia_ppm) : null;
+      const moisture = parseFloat(f.bedding_moisture);
+      const temp = parseFloat(f.ambient_temperature);
+
+      if ((ammonia && ammonia > 25) || moisture > 50 || temp >= 35) {
+        setNotice('⚠️ Barn hazard warning triggered! Alert dispatched to your notifications.');
+      } else {
+        setNotice('Barn environment telemetry logged successfully.');
+      }
       setIsLogging(false);
       setF({ ambient_temperature: '', humidity: '', bedding_moisture: '', ammonia_ppm: '', hygiene_score: '2' });
       load();
@@ -203,7 +214,7 @@ export default function FarmEnvironmentScreen() {
             </View>
 
             <Heading>Recent Barn Logs</Heading>
-            {history.map((r) => (
+            {sortedHistory.map((r) => (
               <Card key={r.id} style={{ marginBottom: space.sm }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontFamily: font.bodySemi, fontSize: size.sm, color: colors.ink }}>

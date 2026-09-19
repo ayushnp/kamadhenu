@@ -47,6 +47,11 @@ def run_risk_score(
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     rs = save_risk_score(cow_id, result, session)
+    try:
+        from app.services.notification_service import check_and_trigger_risk_alert
+        check_and_trigger_risk_alert(cow_id, result.score, session)
+    except Exception:
+        pass
     return _rs_to_response(rs)
 
 

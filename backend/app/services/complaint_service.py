@@ -61,6 +61,35 @@ def raise_complaint(payload: ComplaintCreate, farmer: User, session: Session) ->
     session.add(complaint)
     session.commit()
     session.refresh(complaint)
+
+    # Trigger notification for assigned staff member (Doctor or Inspector)
+    if complaint.assigned_to:
+        try:
+            from app.models.alert import AlertSeverity, AlertType
+            from app.services.notification_service import create_alert
+            cow_name = bovine.name or bovine.tag_number or f"Cow {str(bovine.id)[:6]}"
+            pri_str = complaint.priority.value if hasattr(complaint.priority, "value") else str(complaint.priority)
+            create_alert(
+                session=session,
+                user_id=complaint.assigned_to,
+                bovine_id=bovine.id,
+                complaint_id=complaint.id,
+                title=f"🚨 New Case Assigned: CMP-{complaint.complaint_number:04d}",
+                message=f"New clinical complaint assigned to you for {cow_name}. Priority: {pri_str.upper()}.",
+                alert_type=AlertType.case_assigned,
+                severity=AlertSeverity.critical if pri_str in ["high", "critical"] else AlertSeverity.warning,
+                data={
+                    "complaint_id": str(complaint.id),
+                    "complaint_number": complaint.complaint_number,
+                    "bovine_id": str(bovine.id),
+                    "cow_name": cow_name,
+                    "priority": pri_str,
+                },
+            )
+        except Exception:
+            pass
+
+    session.refresh(complaint)
     return complaint
 
 

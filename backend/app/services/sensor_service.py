@@ -215,6 +215,13 @@ def ingest_environment(
     session.add(reading)
     session.commit()
     session.refresh(reading)
+
+    try:
+        from app.services.notification_service import check_and_trigger_environment_alert
+        check_and_trigger_environment_alert(reading, session)
+    except Exception:
+        pass
+
     return reading
 
 
@@ -257,13 +264,13 @@ def get_farm_environment_history(
     days: int,
     session: Session,
 ) -> List[EnvironmentReading]:
-    """Return chronological environmental telemetry for the farmer's barn."""
+    """Return chronological environmental telemetry for the farmer's barn (newest first)."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
     statement = (
         select(EnvironmentReading)
         .where(EnvironmentReading.farmer_id == farmer_id)
         .where(EnvironmentReading.recorded_at >= since)
-        .order_by(EnvironmentReading.recorded_at.asc())
+        .order_by(EnvironmentReading.recorded_at.desc())
     )
     return list(session.exec(statement).all())
 

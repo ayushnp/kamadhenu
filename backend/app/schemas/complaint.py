@@ -44,11 +44,23 @@ class ComplaintRead(SQLModel):
     @classmethod
     def from_complaint(cls, complaint) -> "ComplaintRead":
         """Build a ComplaintRead with the formatted complaint_ref."""
-        data = complaint.model_dump()
-        data["complaint_ref"] = (
-            f"CMP-{complaint.complaint_number:04d}" if complaint.complaint_number else None
+        return cls(
+            id=complaint.id,
+            complaint_number=complaint.complaint_number,
+            complaint_ref=f"CMP-{complaint.complaint_number:04d}" if complaint.complaint_number else None,
+            farmer_id=complaint.farmer_id,
+            bovine_id=complaint.bovine_id,
+            assigned_to=complaint.assigned_to,
+            status=complaint.status,
+            priority=complaint.priority,
+            description=complaint.description,
+            symptoms=complaint.symptoms,
+            resolved_notes=complaint.resolved_notes,
+            animal_lat=complaint.animal_lat,
+            animal_lng=complaint.animal_lng,
+            created_at=complaint.created_at,
+            updated_at=complaint.updated_at,
         )
-        return cls(**data)
 
 
 # ─── Update — status (Doctor / Inspector) ─────────────────────────────────────
