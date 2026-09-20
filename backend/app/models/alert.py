@@ -20,6 +20,7 @@ class AlertType(str, Enum):
     outbreak_warning = "outbreak_warning"
     vaccine_overdue = "vaccine_overdue"
     barn_environment_hazard = "barn_environment_hazard"
+    farm_inspection = "farm_inspection"
 
 
 class Alert(SQLModel, table=True):

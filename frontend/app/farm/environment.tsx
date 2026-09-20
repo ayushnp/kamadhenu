@@ -118,6 +118,32 @@ export default function FarmEnvironmentScreen() {
         <Banner message={error} />
         <Banner message={notice} tone="good" />
 
+        <Pressable
+          onPress={() => router.push('/farm/inspections')}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.pastureSoft,
+            borderRadius: radius.md,
+            padding: space.md,
+            marginBottom: space.lg,
+            opacity: pressed ? 0.8 : 1,
+            borderWidth: 1,
+            borderColor: colors.pasture,
+          })}
+        >
+          <Feather name="clipboard" size={20} color={colors.pasture} style={{ marginRight: space.sm }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.sm, color: colors.pasture }}>
+              Official Barn & Farm Inspection Reports
+            </Text>
+            <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark, marginTop: 2 }}>
+              View Field Inspector audit reports, ammonia ratings & hygiene scores
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.pasture} />
+        </Pressable>
+
         {/* Manual Ingestion Form */}
         {isLogging && (
           <Card>

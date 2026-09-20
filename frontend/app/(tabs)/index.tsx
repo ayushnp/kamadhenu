@@ -6,11 +6,15 @@ import { Badge, Banner, Button, Card, Caption, Empty, Heading, Title } from '../
 import CowLoader from '../../src/components/CowLoader';
 import { NotificationBanner } from '../../src/components/NotificationBanner';
 import { NotificationModal } from '../../src/components/NotificationModal';
+import DoctorHome from '../staff/doctor';
+import InspectorHome from '../staff/inspector';
+import AuthorityHome from '../staff/authority';
 import { useAuth } from '../../src/lib/auth';
 import { useTranslation } from '../../src/i18n';
 import { cows as cowsApi, alerts as alertsApi, ApiError } from '../../src/api';
 import type { Cow, AlertRead } from '../../src/api/types';
 import { cowLabel, cowSubtitle } from '../../src/lib/format';
+import { navigateToAlertTarget } from '../../src/lib/alertNavigation';
 import { colors, font, radius, size, space } from '../../src/theme';
 
 const styles = StyleSheet.create({
@@ -103,6 +107,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   const isFarmer = user?.role === 'farmer';
+  const isDoctor = user?.role === 'doctor';
+  const isInspector = user?.role === 'inspector';
+  const isAuthority = user?.role === 'authority';
 
   const load = useCallback(async () => {
     try {
@@ -133,13 +140,96 @@ export default function Home() {
   const firstName = (user?.name ?? '').split(' ')[0];
   const unreadAlertsCount = userAlerts.filter((a) => !a.is_read).length;
 
+  // Staff dashboards manage their own scroll & data fetching â€” render directly
+  if (isDoctor) {
+    return (
+      <>
+        <DoctorHome onLookup={() => router.push('/(tabs)/lookup')} />
+        <NotificationModal
+          visible={notificationModalVisible}
+          alerts={userAlerts}
+          onDismiss={() => setNotificationModalVisible(false)}
+          onRefreshAlerts={load}
+          onPressAlert={(alert) => {
+            setNotificationModalVisible(false);
+            navigateToAlertTarget(alert, router);
+          }}
+        />
+      </>
+    );
+  }
+
+  if (isInspector) {
+    return (
+      <>
+        <InspectorHome
+          onLookup={() => router.push('/(tabs)/lookup')}
+          onOpenNotifications={() => setNotificationModalVisible(true)}
+          unreadCount={unreadAlertsCount}
+        />
+        <NotificationModal
+          visible={notificationModalVisible}
+          alerts={userAlerts}
+          onDismiss={() => setNotificationModalVisible(false)}
+          onRefreshAlerts={load}
+          onPressAlert={(alert) => {
+            setNotificationModalVisible(false);
+            navigateToAlertTarget(alert, router);
+          }}
+        />
+      </>
+    );
+  }
+
+  if (isAuthority) {
+    return (
+      <>
+        <AuthorityHome
+          onOpenNotifications={() => setNotificationModalVisible(true)}
+          unreadCount={unreadAlertsCount}
+        />
+        <NotificationModal
+          visible={notificationModalVisible}
+          alerts={userAlerts}
+          onDismiss={() => setNotificationModalVisible(false)}
+          onRefreshAlerts={load}
+          onPressAlert={(alert) => {
+            setNotificationModalVisible(false);
+            navigateToAlertTarget(alert, router);
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.surface }}
-        contentContainerStyle={{ padding: space.lg, paddingTop: 64, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: space.lg, paddingTop: 56, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.pasture} />}
       >
+        {/* Back navigation button if came from another portal or screen */}
+        {router.canGoBack() && (
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: space.sm,
+              opacity: pressed ? 0.7 : 1,
+              alignSelf: 'flex-start',
+            })}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Feather name="arrow-left" size={19} color={colors.bark} />
+            <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>
+              {t('common.back') || 'Back'}
+            </Text>
+          </Pressable>
+        )}
+
         {/* Top Header Row with Greeting & Notification Bell */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space.xs }}>
           <View style={{ flex: 1, paddingRight: space.md }}>
@@ -174,13 +264,7 @@ export default function Home() {
           alerts={userAlerts}
           onDismiss={handleDismissAlert}
           onPressAlert={(alert) => {
-            if (alert.bovine_id) {
-              router.push(`/cow/${alert.bovine_id}`);
-            } else if (alert.complaint_id) {
-              router.push('/(tabs)/complaints');
-            } else if (alert.alert_type === 'barn_environment_hazard') {
-              router.push('/farm/environment');
-            }
+            navigateToAlertTarget(alert, router);
           }}
         />
 
@@ -204,11 +288,7 @@ export default function Home() {
         <View style={{ height: space.md }} />
         <Banner message={error} />
 
-        {isFarmer ? (
-          <FarmerHome herd={herd} loading={loading} onOpen={(id) => router.push(`/cow/${id}`)} onAdd={() => router.push('/cow/new')} />
-        ) : (
-          <StaffHome onLookup={() => router.push('/(tabs)/lookup')} />
-        )}
+        <FarmerHome herd={herd} loading={loading} onOpen={(id) => router.push(`/cow/${id}`)} onAdd={() => router.push('/cow/new')} />
       </ScrollView>
 
       {/* Full Notification Center Modal */}
@@ -219,13 +299,7 @@ export default function Home() {
         onRefreshAlerts={load}
         onPressAlert={(alert) => {
           setNotificationModalVisible(false);
-          if (alert.bovine_id) {
-            router.push(`/cow/${alert.bovine_id}`);
-          } else if (alert.complaint_id) {
-            router.push('/(tabs)/complaints');
-          } else if (alert.alert_type === 'barn_environment_hazard') {
-            router.push('/farm/environment');
-          }
+          navigateToAlertTarget(alert, router);
         }}
       />
     </>
@@ -283,7 +357,7 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>{cowLabel(c)}</Text>
               <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
-                {cowSubtitle(c, t) || '—'}
+                {cowSubtitle(c, t) || 'â€”'}
               </Text>
             </View>
             {!c.is_active && <Badge label="Inactive" tone="warn" />}
@@ -312,6 +386,26 @@ function FarmerHome({ herd, loading, onOpen, onAdd }: {
             </Text>
             <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
               {t('home.barnMonitorSub')}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.muted} />
+        </Card>
+      </Pressable>
+
+      <Pressable onPress={() => router.push('/farm/inspections')}>
+        <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{
+            width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.pastureSoft,
+            alignItems: 'center', justifyContent: 'center', marginRight: space.md,
+          }}>
+            <Feather name="clipboard" size={20} color={colors.pasture} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.md, color: colors.ink }}>
+              Barn & Farm Inspections
+            </Text>
+            <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.muted, marginTop: 2 }}>
+              Official hygiene & biosecurity reports from Field Inspectors
             </Text>
           </View>
           <Feather name="chevron-right" size={20} color={colors.muted} />

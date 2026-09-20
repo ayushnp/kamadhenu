@@ -259,7 +259,13 @@ export interface CowTelemetrySummary {
 
 /* ── Alerts & Notifications ────────────────────────────────────────────────── */
 export type AlertSeverity = 'info' | 'warning' | 'critical';
-export type AlertType = 'high_risk_mastitis' | 'case_assigned' | 'outbreak_warning' | 'vaccine_overdue' | 'barn_environment_hazard';
+export type AlertType =
+  | 'high_risk_mastitis'
+  | 'case_assigned'
+  | 'outbreak_warning'
+  | 'vaccine_overdue'
+  | 'barn_environment_hazard'
+  | 'farm_inspection';
 
 export interface AlertRead {
   id: string;
@@ -290,4 +296,86 @@ export interface OutbreakCluster {
   latest_incident_at: string;
 }
 
+/* ── Risk Engine ─────────────────────────────────────────────────────────── */
+export interface RiskFactor {
+  label: string;
+  weight: string; // 'high' | 'moderate' | 'low'
+  value: number;
+}
 
+export interface RiskResponse {
+  cow_id: string;
+  scored_at: string;
+  score: number; // 0.0 - 100.0
+  category: string; // 'no_risk' | 'low' | 'moderate' | 'high'
+  factors: RiskFactor[];
+  engine_version: string;
+  window_days: number;
+  recommendation: string;
+}
+
+export interface FarmRiskSummary {
+  total_cows: number;
+  no_risk: number;
+  low: number;
+  moderate: number;
+  high: number;
+  high_risk_cows: Array<{
+    cow_id: string;
+    name: string | null;
+    pashu_aadhar: string | null;
+    score: number;
+    category: string;
+  }>;
+}
+
+/* ── Farm & Barn Inspections ─────────────────────────────────────────────── */
+export type InspectionStatus = 'passed' | 'conditional_pass' | 'failed';
+
+export interface FarmInspection {
+  id: string;
+  farmer_id: string;
+  farmer_name?: string | null;
+  farmer_place?: string | null;
+  farmer_phone?: string | null;
+  inspector_id: string;
+  inspector_name?: string | null;
+  complaint_id?: string | null;
+  inspected_at: string;
+  status: InspectionStatus;
+  overall_score: number;
+  biosecurity_score: number;
+  ventilation_score: number;
+  bedding_hygiene_score: number;
+  water_feed_score: number;
+  milking_hygiene_score: number;
+  animal_welfare_score: number;
+  ammonia_ppm_observed?: number | null;
+  bedding_moisture_observed?: number | null;
+  summary: string;
+  deficiencies?: string | null;
+  recommendations?: string | null;
+  follow_up_required: boolean;
+  follow_up_date?: string | null;
+  created_at: string;
+}
+
+export interface FarmInspectionCreate {
+  farmer_id: string;
+  complaint_id?: string | null;
+  status?: InspectionStatus;
+  overall_score?: number;
+  biosecurity_score?: number;
+  ventilation_score?: number;
+  bedding_hygiene_score?: number;
+  water_feed_score?: number;
+  milking_hygiene_score?: number;
+  animal_welfare_score?: number;
+  ammonia_ppm_observed?: number | null;
+  bedding_moisture_observed?: number | null;
+  summary: string;
+  deficiencies?: string | null;
+  recommendations?: string | null;
+  follow_up_required?: boolean;
+  follow_up_date?: string | null;
+}

@@ -66,7 +66,7 @@ export const vaccinations = {
 export const complaints = {
   create: (payload: import('./types').ComplaintCreate) =>
     request<import('./types').Complaint>('/complaints/', { method: 'POST', body: payload }),
-  list: (params?: { status?: import('./types').ComplaintStatus; assigned_to?: string }) =>
+  list: (params?: { status?: import('./types').ComplaintStatus; assigned_to?: string; bovine_id?: string }) =>
     request<import('./types').Complaint[]>('/complaints/', { query: params }),
   byNumber: (complaintNumber: number) =>
     request<import('./types').Complaint>(`/complaints/number/${complaintNumber}`),
@@ -117,6 +117,37 @@ export const alerts = {
       method: 'POST',
       query: alertKind ? { alert_kind: alertKind } : undefined,
     }),
+};
+
+/* ── Risk Engine ─────────────────────────────────────────────────────────── */
+export const risk = {
+  /** Run a fresh mastitis risk assessment for a cow. */
+  score: (cowId: string, windowDays = 7) =>
+    request<import('./types').RiskResponse>(`/risk/score/${cowId}`, {
+      method: 'POST',
+      query: { window_days: windowDays },
+    }),
+  /** Latest risk score for a cow. */
+  latest: (cowId: string) =>
+    request<import('./types').RiskResponse>(`/risk/cows/${cowId}/latest`),
+  /** Risk score trend for a cow. */
+  history: (cowId: string, days = 14) =>
+    request<import('./types').RiskResponse[]>(`/risk/cows/${cowId}/history`, { query: { days } }),
+  /** District-level risk distribution — available to all staff. */
+  farmSummary: () =>
+    request<import('./types').FarmRiskSummary>('/risk/farm/summary'),
+};
+
+/* ── Farm & Barn Inspections ─────────────────────────────────────────────── */
+export const inspections = {
+  create: (payload: import('./types').FarmInspectionCreate) =>
+    request<import('./types').FarmInspection>('/inspections/', { method: 'POST', body: payload }),
+  list: (params?: { farmer_id?: string; limit?: number }) =>
+    request<import('./types').FarmInspection[]>('/inspections/', { query: params }),
+  byId: (id: string) =>
+    request<import('./types').FarmInspection>(`/inspections/${id}`),
+  farmers: () =>
+    request<UserPublic[]>('/inspections/farmers'),
 };
 
 export * from './types';

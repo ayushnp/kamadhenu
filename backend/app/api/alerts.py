@@ -126,6 +126,7 @@ def simulate_test_alert(
     from app.models.cow import Bovine
     from app.services.notification_service import create_alert
 
+    from app.models.complaint import Complaint
     role = str(user.role)
     if alert_kind == "environment" or (role == "farmer" and alert_kind == "barn"):
         alert = create_alert(
@@ -137,15 +138,24 @@ def simulate_test_alert(
             severity=AlertSeverity.warning,
             data={"hazard": "ammonia", "ammonia_ppm": 28.4, "threshold": 25.0},
         )
-    elif role == "doctor":
+    elif role in ("doctor", "inspector"):
+        # Link to active assigned complaint if exists, otherwise first complaint
+        c = session.exec(select(Complaint).where(Complaint.assigned_to == user.id)).first()
+        if not c:
+            c = session.exec(select(Complaint)).first()
+        complaint_id = c.id if c else None
+        bovine_id = c.bovine_id if c else None
+        c_num = c.complaint_number if c else 24
         alert = create_alert(
             session=session,
             user_id=user.id,
-            title="🚨 New Case Assigned: CMP-0024",
-            message="Clinical emergency assigned: Cow showing high fever and udder swelling in Mandya.",
+            complaint_id=complaint_id,
+            bovine_id=bovine_id,
+            title=f"🚨 New Case Assigned: CMP-{c_num:04d}",
+            message=f"Clinical emergency assigned: Cow showing high fever and udder swelling in Mandya.",
             alert_type=AlertType.case_assigned,
             severity=AlertSeverity.critical,
-            data={"complaint_number": 24, "priority": "critical"},
+            data={"complaint_id": str(complaint_id) if complaint_id else None, "complaint_number": c_num, "priority": "critical"},
         )
     elif role == "authority":
         alert = create_alert(
@@ -163,15 +173,20 @@ def simulate_test_alert(
         cow = session.exec(select(Bovine).where(Bovine.farmer_id == user.id)).first()
         cow_name = cow.name if cow else "Gauri (KA-04-101)"
         cow_id = cow.id if cow else None
+        complaint = None
+        if cow_id:
+            complaint = session.exec(select(Complaint).where(Complaint.bovine_id == cow_id)).first()
+        complaint_id = complaint.id if complaint else None
         alert = create_alert(
             session=session,
             user_id=user.id,
             bovine_id=cow_id,
+            complaint_id=complaint_id,
             title=f"🚨 High Mastitis Risk: {cow_name} (86/100)",
             message=f"Collar rumination dropped 38% and milk conductivity spiked in {cow_name}. Immediate isolation and veterinary check advised.",
             alert_type=AlertType.high_risk_mastitis,
             severity=AlertSeverity.critical,
-            data={"cow_name": cow_name, "risk_score": 86.0},
+            data={"cow_name": cow_name, "risk_score": 86.0, "complaint_id": str(complaint_id) if complaint_id else None},
         )
 
     return AlertRead(

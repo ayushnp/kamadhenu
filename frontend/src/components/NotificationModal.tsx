@@ -252,11 +252,11 @@ export function NotificationModal({
                           style={styles.inspectAction}
                         >
                           <Text style={styles.inspectText}>
-                            {alert.bovine_id
-                              ? 'View Cow Health →'
-                              : alert.complaint_id
+                            {alert.complaint_id
                               ? 'View Complaint →'
-                              : 'Open Barn Monitor →'}
+                              : isEnvironment
+                              ? 'Open Barn Monitor →'
+                              : 'View Case / Animal →'}
                           </Text>
                         </Pressable>
                       )}

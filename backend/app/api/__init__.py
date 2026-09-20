@@ -11,6 +11,7 @@ from app.api.users import router as users_router
 from app.api.risk import router as risk_router
 from app.api.vaccinations import router as vaccinations_router
 from app.api.alerts import router as alerts_router
+from app.api.inspections import router as inspections_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -23,3 +24,4 @@ api_router.include_router(complaints_router)
 api_router.include_router(sensors_router)
 api_router.include_router(risk_router)
 api_router.include_router(alerts_router)
+api_router.include_router(inspections_router)

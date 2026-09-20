@@ -98,7 +98,7 @@ export default function LandingScreen() {
       subtitle: t('landing.doctorSub'),
       accent: '#2970B8',
       accentSoft: '#E0EDFC',
-      available: false,
+      available: true,
     },
     {
       id: 'inspector',
@@ -107,7 +107,7 @@ export default function LandingScreen() {
       subtitle: t('landing.inspectorSub'),
       accent: colors.marigold,
       accentSoft: colors.marigoldSoft,
-      available: false,
+      available: true,
     },
     {
       id: 'authority',
@@ -116,7 +116,7 @@ export default function LandingScreen() {
       subtitle: t('landing.authoritySub'),
       accent: colors.sindoor,
       accentSoft: colors.sindoorSoft,
-      available: false,
+      available: true,
     },
   ];
 

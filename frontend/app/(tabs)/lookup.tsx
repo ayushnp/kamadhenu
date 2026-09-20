@@ -57,7 +57,29 @@ export default function Lookup() {
 
   return (
     <Screen>
-      <View style={{ marginTop: 48, marginBottom: space.xl }}>
+      {/* Back button if pushed from staff/doctor/inspector dashboard */}
+      {router.canGoBack() && (
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: 40,
+            marginBottom: space.sm,
+            opacity: pressed ? 0.7 : 1,
+            alignSelf: 'flex-start',
+          })}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Feather name="arrow-left" size={19} color={colors.bark} />
+          <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>
+            {t('common.back') || 'Back'}
+          </Text>
+        </Pressable>
+      )}
+
+      <View style={{ marginTop: router.canGoBack() ? space.md : 48, marginBottom: space.xl }}>
         <Caption>{t('lookup.caption')}</Caption>
         <Title>{t('lookup.title')}</Title>
       </View>

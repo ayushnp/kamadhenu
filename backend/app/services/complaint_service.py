@@ -119,6 +119,7 @@ def list_complaints(
     session: Session,
     filter_status: Optional[ComplaintStatus] = None,
     assigned_to: Optional[uuid.UUID] = None,
+    bovine_id: Optional[uuid.UUID] = None,
 ) -> list[Complaint]:
     """Role-aware complaint listing.
 
@@ -138,6 +139,8 @@ def list_complaints(
         stmt = stmt.where(Complaint.status == filter_status)
     if assigned_to:
         stmt = stmt.where(Complaint.assigned_to == assigned_to)
+    if bovine_id:
+        stmt = stmt.where(Complaint.bovine_id == bovine_id)
 
     return list(session.exec(stmt.order_by(Complaint.created_at.desc())).all())  # type: ignore[arg-type]
 

@@ -14,6 +14,7 @@ from app.models.user import User, UserRole
 from app.models.vaccination import Vaccination
 from app.models.risk import RiskScore
 from app.models.alert import Alert, AlertSeverity, AlertType
+from app.models.inspection import FarmInspection, InspectionStatus
 
 __all__ = [
     "User",
@@ -33,4 +34,6 @@ __all__ = [
     "Alert",
     "AlertSeverity",
     "AlertType",
+    "FarmInspection",
+    "InspectionStatus",
 ]

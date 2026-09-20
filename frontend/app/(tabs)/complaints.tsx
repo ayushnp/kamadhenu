@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Badge, Banner, Button, Card, Caption, Empty, Segmented, Title } from '../../src/components/ui';
 import CowLoader from '../../src/components/CowLoader';
@@ -17,10 +17,18 @@ export default function ComplaintsScreen() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{ bovine_id?: string }>();
+  const [selectedBovineId, setSelectedBovineId] = useState<string | undefined>(params.bovine_id);
   const [items, setItems] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<StatusFilter>('all');
+
+  useEffect(() => {
+    if (params.bovine_id) {
+      setSelectedBovineId(params.bovine_id);
+    }
+  }, [params.bovine_id]);
 
   const isFarmer = user?.role === 'farmer';
   const isDoctorOrInspector = user?.role === 'doctor' || user?.role === 'inspector';
@@ -29,7 +37,10 @@ export default function ComplaintsScreen() {
     setLoading(true);
     try {
       const statusParam = filter === 'all' ? undefined : (filter as ComplaintStatus);
-      const res = await complaintsApi.list(statusParam ? { status: statusParam } : undefined);
+      const res = await complaintsApi.list({
+        ...(statusParam ? { status: statusParam } : {}),
+        ...(selectedBovineId ? { bovine_id: selectedBovineId } : {}),
+      });
       setItems(res);
       setError('');
     } catch (e) {
@@ -37,7 +48,7 @@ export default function ComplaintsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, selectedBovineId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -48,9 +59,30 @@ export default function ComplaintsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.surface }}
-      contentContainerStyle={{ padding: space.lg, paddingTop: 64, paddingBottom: 48 }}
+      contentContainerStyle={{ padding: space.lg, paddingTop: 56, paddingBottom: 48 }}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.pasture} />}
     >
+      {/* Back button if pushed from a dashboard */}
+      {router.canGoBack() && (
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: space.sm,
+            opacity: pressed ? 0.7 : 1,
+            alignSelf: 'flex-start',
+          })}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Feather name="arrow-left" size={19} color={colors.bark} />
+          <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>
+            {t('common.back') || 'Back'}
+          </Text>
+        </Pressable>
+      )}
+
       <Caption>
         {isFarmer
           ? t('complaints.headerFarmer')
@@ -79,6 +111,22 @@ export default function ComplaintsScreen() {
         <StatCounter value={String(inProgressCount)} label={t('complaints.filterInProgress')} tone="info" />
         <StatCounter value={String(resolvedCount)} label={t('complaints.filterResolved')} tone="good" />
       </View>
+
+      {/* Animal Filter Chip */}
+      {selectedBovineId && (
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', backgroundColor: colors.pastureSoft,
+          paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, marginBottom: space.md,
+        }}>
+          <Feather name="filter" size={14} color={colors.pasture} style={{ marginRight: space.sm }} />
+          <Text style={{ flex: 1, fontFamily: font.bodySemi, fontSize: size.sm, color: colors.pasture }}>
+            Filtered by animal complaints
+          </Text>
+          <Pressable onPress={() => setSelectedBovineId(undefined)} style={{ padding: 4 }}>
+            <Text style={{ fontFamily: font.bodySemi, fontSize: size.xs, color: colors.bark }}>Clear filter ✕</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Filter Tabs */}
       <Segmented

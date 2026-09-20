@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { Banner, Button, Field, Screen, Title } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
 import { ApiError } from '../../src/api';
@@ -41,7 +42,26 @@ export default function Register() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Screen>
-        <View style={{ marginTop: 48, marginBottom: space.xl }}>
+        <Pressable
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/landing')}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: 40,
+            marginBottom: space.sm,
+            opacity: pressed ? 0.7 : 1,
+            alignSelf: 'flex-start',
+          })}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Feather name="arrow-left" size={19} color={colors.bark} />
+          <Text style={{ fontFamily: font.bodyMid, fontSize: size.base, color: colors.bark, marginLeft: 6 }}>
+            Back
+          </Text>
+        </Pressable>
+
+        <View style={{ marginTop: space.md, marginBottom: space.xl }}>
           <Title>Register your farm</Title>
           <Text style={{ fontFamily: font.body, fontSize: size.md, color: colors.bark, marginTop: 6 }}>
             Takes a minute. You can add your animals right after.

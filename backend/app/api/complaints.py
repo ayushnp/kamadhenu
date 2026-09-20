@@ -65,6 +65,7 @@ def get_complaints(
     session: SessionDep,
     filter_status: Optional[ComplaintStatus] = Query(default=None, alias="status"),
     assigned_to: Optional[uuid.UUID] = Query(default=None),
+    bovine_id: Optional[uuid.UUID] = Query(default=None),
 ) -> list[ComplaintRead]:
     """Return complaints filtered by role:
 
@@ -73,7 +74,11 @@ def get_complaints(
     - **Authority**: all complaints (optionally filtered by status or assigned_to)
     """
     complaints = list_complaints(
-        current_user, session, filter_status=filter_status, assigned_to=assigned_to
+        current_user,
+        session,
+        filter_status=filter_status,
+        assigned_to=assigned_to,
+        bovine_id=bovine_id,
     )
     return [ComplaintRead.from_complaint(c) for c in complaints]
 
