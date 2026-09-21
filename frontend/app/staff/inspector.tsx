@@ -677,6 +677,21 @@ function InspectionCard({
             View Animal
           </Text>
         </Pressable>
+        <Pressable
+          onPress={() => router.push(`/cow/trends/${c.bovine_id}` as any)}
+          style={{
+            flex: 1,
+            padding: space.sm,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: colors.line,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ fontFamily: font.bodyMid, fontSize: size.sm, color: colors.pasture }}>
+            Trends 📈
+          </Text>
+        </Pressable>
         {c.status === "assigned" && (
           <Pressable
             onPress={() => onAction(c, "in_progress")}

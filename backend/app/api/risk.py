@@ -40,8 +40,9 @@ def run_risk_score(
     session: SessionDep,
     user: CurrentUser,
     window_days: int = Query(default=7, ge=3, le=14),
+    lang: str = Query(default="en"),
 ) -> RiskResponse:
-    _assert_cow_access(cow_id, user, session)
+    cow = _assert_cow_access(cow_id, user, session)
     try:
         result = score_cow(cow_id, session, window_days=window_days)
     except RuntimeError as e:
@@ -52,7 +53,7 @@ def run_risk_score(
         check_and_trigger_risk_alert(cow_id, result.score, session)
     except Exception:
         pass
-    return _rs_to_response(rs)
+    return _rs_to_response(rs, cow=cow, lang=lang, force_refresh=True, session=session)
 
 
 @router.get(
@@ -64,15 +65,16 @@ def get_latest_risk_score(
     cow_id: uuid.UUID,
     session: SessionDep,
     user: CurrentUser,
+    lang: str = Query(default="en"),
 ) -> RiskResponse:
-    _assert_cow_access(cow_id, user, session)
+    cow = _assert_cow_access(cow_id, user, session)
     rs = get_latest_risk(cow_id, session)
     if not rs:
         raise HTTPException(
             status_code=404,
             detail="No risk score found. POST /risk/score/{cow_id} to generate one.",
         )
-    return _rs_to_response(rs)
+    return _rs_to_response(rs, cow=cow, lang=lang, force_refresh=False, session=session)
 
 
 @router.get(
@@ -88,7 +90,7 @@ def get_cow_risk_history(
 ) -> List[RiskResponse]:
     _assert_cow_access(cow_id, user, session)
     records = get_risk_history(cow_id, days, session)
-    return [_rs_to_response(r) for r in records]
+    return [_rs_to_response(r, include_ai=False) for r in records]
 
 
 @router.get(

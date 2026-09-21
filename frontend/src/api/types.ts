@@ -303,6 +303,16 @@ export interface RiskFactor {
   value: number;
 }
 
+export interface AIGuidance {
+  verdict: string;
+  immediate_actions: string[];
+  hygiene_and_bedding_tips: string[];
+  urgency: 'immediate' | 'within_24h' | 'routine_monitoring';
+  call_vet: boolean;
+  explanation_plain: string;
+  model_name?: string;
+}
+
 export interface RiskResponse {
   cow_id: string;
   scored_at: string;
@@ -312,6 +322,7 @@ export interface RiskResponse {
   engine_version: string;
   window_days: number;
   recommendation: string;
+  ai_guidance?: AIGuidance | null;
 }
 
 export interface FarmRiskSummary {

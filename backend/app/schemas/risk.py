@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -11,6 +11,16 @@ class RiskFactor(BaseModel):
     label: str      # "Milk EC rose 34% above baseline"
     weight: str     # "high" | "moderate" | "low"
     value: float    # raw computed feature value
+
+
+class AIGuidance(BaseModel):
+    verdict: str
+    immediate_actions: List[str]
+    hygiene_and_bedding_tips: List[str]
+    urgency: str            # "immediate" | "within_24h" | "routine_monitoring"
+    call_vet: bool
+    explanation_plain: str
+    model_name: str = "Groq Llama-3.3 + XGBoost"
 
 
 class RiskResponse(BaseModel):
@@ -22,6 +32,7 @@ class RiskResponse(BaseModel):
     engine_version: str
     window_days: int
     recommendation: str  # plain-English action for farmer
+    ai_guidance: Optional[AIGuidance] = None
 
 
 class FarmRiskSummary(BaseModel):

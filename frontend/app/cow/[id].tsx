@@ -4,8 +4,8 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Badge, Banner, Button, Caption, Card, Empty, Heading, Segmented, Title } from '../../src/components/ui';
 import CowLoader from '../../src/components/CowLoader';
-import { cows as cowsApi, sensors as sensorsApi, ApiError } from '../../src/api';
-import type { CowTelemetrySummary, CowWithHistory, MilkReading, WearableReading } from '../../src/api/types';
+import { cows as cowsApi, risk as riskApi, sensors as sensorsApi, ApiError } from '../../src/api';
+import type { CowTelemetrySummary, CowWithHistory, MilkReading, RiskResponse, WearableReading } from '../../src/api/types';
 import { useAuth } from '../../src/lib/auth';
 import { useTranslation } from '../../src/i18n';
 import { cowLabel, cowSubtitle, daysUntil, nextDue, openConditions, prettyDate } from '../../src/lib/format';
@@ -20,6 +20,9 @@ export default function CowDetail() {
   const { t } = useTranslation();
   const [cow, setCow] = useState<CowWithHistory | null>(null);
   const [telemetry, setTelemetry] = useState<CowTelemetrySummary | null>(null);
+  const [riskScore, setRiskScore] = useState<RiskResponse | null>(null);
+  const [scoringLoading, setScoringLoading] = useState(false);
+  const [checkedActions, setCheckedActions] = useState<Record<number, boolean>>({});
   const [tab, setTab] = useState<Tab>('health');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -27,12 +30,14 @@ export default function CowDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [cowData, telemetryData] = await Promise.all([
+      const [cowData, telemetryData, riskData] = await Promise.all([
         cowsApi.detail(id),
         sensorsApi.cowSummary(id, 14).catch(() => null),
+        riskApi.latest(id).catch(() => null),
       ]);
       setCow(cowData);
       setTelemetry(telemetryData);
+      setRiskScore(riskData);
       setError('');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not load this animal.');
@@ -42,6 +47,20 @@ export default function CowDetail() {
   }, [id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const handleRunAssessment = async () => {
+    if (!id) return;
+    setScoringLoading(true);
+    try {
+      const res = await riskApi.score(id, 7);
+      setRiskScore(res);
+      setCheckedActions({});
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to evaluate AI risk.');
+    } finally {
+      setScoringLoading(false);
+    }
+  };
 
   if (loading && !cow) {
     return <View style={{ flex: 1, backgroundColor: colors.surface, justifyContent: 'center' }}><CowLoader label="Fetching animal…" /></View>;
@@ -64,6 +83,8 @@ export default function CowDetail() {
   const latestWearable = telemetry?.wearable && telemetry.wearable.length > 0 ? telemetry.wearable[0] : null;
   const recentMilk = telemetry?.milk && telemetry.milk.length > 0 ? telemetry.milk.slice(0, 4) : [];
   const mastitisQuarter = recentMilk.find((m) => m.electrical_conductivity > 5.8 || m.ph > 6.8 || (m.cmt_result && m.cmt_result !== 'negative'));
+
+  const ai = riskScore?.ai_guidance;
 
   return (
     <ScrollView
@@ -98,14 +119,171 @@ export default function CowDetail() {
         {mastitisQuarter && <Badge label={t('cow.mastitisQuarterRisk', { quarter: mastitisQuarter.quarter })} tone="risk" />}
       </View>
 
-      {/* Quick Action: Raise Complaint */}
-      <View style={{ marginBottom: space.lg }}>
-        <Button
-          label={t('cow.raiseComplaintBtn')}
-          onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
-          variant="secondary"
-        />
+      {/* Primary Action Buttons: Trends & Complaint */}
+      <View style={{ flexDirection: 'row', gap: space.sm, marginBottom: space.md }}>
+        <View style={{ flex: 1 }}>
+          <Button
+            label="📈 14-Day Trends"
+            onPress={() => router.push(`/cow/trends/${cow.id}`)}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button
+            label={t('cow.raiseComplaintBtn')}
+            onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
+            variant="secondary"
+          />
+        </View>
       </View>
+
+      {/* Groq AI Veterinary Copilot Card */}
+      <Card style={{
+        backgroundColor: colors.milk,
+        borderColor: (riskScore?.score ?? 0) >= 60 ? colors.sindoor : colors.pasture,
+        borderWidth: 1.5,
+        marginBottom: space.lg,
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Feather name="cpu" size={18} color={colors.pasture} />
+            <Text style={{ fontFamily: font.displayMid, fontSize: size.base, color: colors.ink }}>
+              AI Clinical Guidance
+            </Text>
+          </View>
+          <View style={{
+            backgroundColor: (riskScore?.score ?? 0) >= 60 ? colors.sindoorSoft : (riskScore?.score ?? 0) >= 30 ? colors.marigoldSoft : colors.pastureSoft,
+            paddingHorizontal: 8,
+            paddingVertical: 2,
+            borderRadius: radius.pill,
+          }}>
+            <Text style={{
+              fontFamily: font.bodySemi,
+              fontSize: 11,
+              color: (riskScore?.score ?? 0) >= 60 ? colors.sindoor : (riskScore?.score ?? 0) >= 30 ? '#8A5D13' : colors.pasture,
+            }}>
+              {riskScore ? `${riskScore.score.toFixed(0)}/100 · ${riskScore.category.toUpperCase()}` : 'AI Ready'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={{ fontFamily: font.body, fontSize: 10, color: colors.muted, marginBottom: space.xs }}>
+          Powered by Groq Llama-3.3 + XGBoost Risk Engine & SHAP Explainability
+        </Text>
+
+        {ai ? (
+          <>
+            <View style={{
+              backgroundColor: ai.urgency === 'immediate' ? colors.sindoorSoft : colors.surface,
+              padding: space.sm,
+              borderRadius: radius.md,
+              marginVertical: space.xs,
+            }}>
+              <Text style={{
+                fontFamily: font.bodySemi,
+                fontSize: size.sm,
+                color: ai.urgency === 'immediate' ? colors.sindoor : colors.ink,
+              }}>
+                {ai.verdict}
+              </Text>
+              <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark, marginTop: 4, lineHeight: 18 }}>
+                {ai.explanation_plain}
+              </Text>
+            </View>
+
+            {/* Interactive Action Checklist */}
+            {ai.immediate_actions?.length > 0 && (
+              <View style={{ marginTop: space.sm }}>
+                <Text style={{ fontFamily: font.bodySemi, fontSize: size.xs, color: colors.ink, marginBottom: 6 }}>
+                  Action Checklist for Farmer:
+                </Text>
+                {ai.immediate_actions.map((act, idx) => {
+                  const isChecked = !!checkedActions[idx];
+                  return (
+                    <Pressable
+                      key={idx}
+                      onPress={() => setCheckedActions({ ...checkedActions, [idx]: !isChecked })}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}
+                    >
+                      <Feather
+                        name={isChecked ? 'check-square' : 'square'}
+                        size={17}
+                        color={isChecked ? colors.pasture : colors.muted}
+                      />
+                      <Text style={{
+                        flex: 1,
+                        fontFamily: font.body,
+                        fontSize: size.xs,
+                        color: isChecked ? colors.muted : colors.ink,
+                        textDecorationLine: isChecked ? 'line-through' : 'none',
+                      }}>
+                        {act}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Top SHAP Contributing Factors */}
+            {riskScore?.factors && riskScore.factors.length > 0 && (
+              <View style={{ marginTop: space.xs, paddingTop: space.xs, borderTopWidth: 1, borderTopColor: colors.line }}>
+                <Text style={{ fontFamily: font.bodyMid, fontSize: 10, color: colors.muted, marginBottom: 4 }}>
+                  Key Physiological Drivers (SHAP Attribution):
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                  {riskScore.factors.slice(0, 3).map((f, idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        backgroundColor: colors.surface,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: radius.sm,
+                        borderWidth: 1,
+                        borderColor: colors.line,
+                      }}
+                    >
+                      <Text style={{ fontFamily: font.body, fontSize: 10, color: colors.bark }}>
+                        {f.label} ({f.weight})
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  label={scoringLoading ? 'Evaluating…' : '🔄 Refresh AI Guidance'}
+                  variant="secondary"
+                  onPress={handleRunAssessment}
+                  loading={scoringLoading}
+                />
+              </View>
+              {ai.call_vet && (
+                <View style={{ flex: 1 }}>
+                  <Button
+                    label="🚨 Call / Alert Vet"
+                    onPress={() => router.push(`/complaints/new?cowId=${cow.id}`)}
+                  />
+                </View>
+              )}
+            </View>
+          </>
+        ) : (
+          <View style={{ marginTop: space.xs }}>
+            <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted, marginBottom: space.sm }}>
+              Run our AI engine to analyze milk quality, collar vitals, and barn hygiene to generate customized guidance.
+            </Text>
+            <Button
+              label={scoringLoading ? 'Evaluating Animal…' : 'Run AI Health Assessment'}
+              onPress={handleRunAssessment}
+              loading={scoringLoading}
+            />
+          </View>
+        )}
+      </Card>
 
       <Banner message={error} />
 

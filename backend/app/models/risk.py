@@ -3,6 +3,8 @@
 import uuid
 from datetime import datetime, timezone
 
+from typing import Optional
+
 from sqlmodel import Field, SQLModel
 
 
@@ -18,6 +20,7 @@ class RiskScore(SQLModel, table=True):
     score: float          # 0.0 - 100.0
     category: str         # "no_risk" | "low" | "moderate" | "high"
     factors: str          # JSON-serialised list[RiskFactor] dicts
+    ai_guidance: Optional[str] = Field(default=None)  # JSON-serialised cached AIGuidance
     engine_version: str = Field(default="xgb-v1")
     window_days: int = Field(default=7)
 

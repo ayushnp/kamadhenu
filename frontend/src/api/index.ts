@@ -122,14 +122,14 @@ export const alerts = {
 /* ── Risk Engine ─────────────────────────────────────────────────────────── */
 export const risk = {
   /** Run a fresh mastitis risk assessment for a cow. */
-  score: (cowId: string, windowDays = 7) =>
+  score: (cowId: string, windowDays = 7, lang = 'en') =>
     request<import('./types').RiskResponse>(`/risk/score/${cowId}`, {
       method: 'POST',
-      query: { window_days: windowDays },
+      query: { window_days: windowDays, lang },
     }),
   /** Latest risk score for a cow. */
-  latest: (cowId: string) =>
-    request<import('./types').RiskResponse>(`/risk/cows/${cowId}/latest`),
+  latest: (cowId: string, lang = 'en') =>
+    request<import('./types').RiskResponse>(`/risk/cows/${cowId}/latest`, { query: { lang } }),
   /** Risk score trend for a cow. */
   history: (cowId: string, days = 14) =>
     request<import('./types').RiskResponse[]>(`/risk/cows/${cowId}/history`, { query: { days } }),

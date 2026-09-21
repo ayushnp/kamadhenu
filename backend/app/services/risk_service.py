@@ -1,6 +1,5 @@
-"""Risk service -- DB operations for mastitis risk scores."""
-
 import json
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
@@ -11,11 +10,19 @@ from sqlmodel import Session, select
 from app.models.cow import Bovine
 from app.models.risk import RiskScore
 from app.models.user import User
-from app.schemas.risk import FarmRiskSummary, RiskFactor, RiskResponse
+from app.schemas.risk import AIGuidance, FarmRiskSummary, RiskFactor, RiskResponse
+from app.services.groq_service import generate_farmer_guidance
 from ml.engine import RiskResult
 
+logger = logging.getLogger(__name__)
 
-def save_risk_score(cow_id: uuid.UUID, result: RiskResult, session: Session) -> RiskScore:
+
+def save_risk_score(
+    cow_id: uuid.UUID,
+    result: RiskResult,
+    session: Session,
+    ai_guidance: Optional[str] = None,
+) -> RiskScore:
     """Persist a RiskResult to the risk_scores table."""
     factors_json = json.dumps([
         {"label": f.label, "weight": f.weight, "value": f.value}
@@ -27,6 +34,7 @@ def save_risk_score(cow_id: uuid.UUID, result: RiskResult, session: Session) -> 
         score=result.score,
         category=result.category,
         factors=factors_json,
+        ai_guidance=ai_guidance,
         engine_version=result.engine_version,
         window_days=result.window_days,
     )
@@ -36,7 +44,14 @@ def save_risk_score(cow_id: uuid.UUID, result: RiskResult, session: Session) -> 
     return rs
 
 
-def _to_response(rs: RiskScore, cow_id: uuid.UUID) -> RiskResponse:
+def _rs_to_response(
+    rs: RiskScore,
+    cow: Optional[Bovine] = None,
+    lang: str = "en",
+    include_ai: bool = True,
+    force_refresh: bool = False,
+    session: Optional[Session] = None,
+) -> RiskResponse:
     factors = [RiskFactor(**f) for f in json.loads(rs.factors or "[]")]
     rec_map = {
         "no_risk":  "Continue routine monitoring. No action required.",
@@ -44,26 +59,33 @@ def _to_response(rs: RiskScore, cow_id: uuid.UUID) -> RiskResponse:
         "moderate": "Perform a manual CMT test on all quarters and consult your veterinarian soon.",
         "high":     "Isolate the cow immediately and contact a veterinarian within 24 hours.",
     }
-    return RiskResponse(
-        cow_id=cow_id,
-        scored_at=rs.scored_at,
-        score=rs.score,
-        category=rs.category,
-        factors=factors,
-        engine_version=rs.engine_version,
-        window_days=rs.window_days,
-        recommendation=rec_map.get(rs.category, ""),
-    )
 
+    ai_guidance: Optional[AIGuidance] = None
+    if include_ai:
+        # 1. Try DB-persisted cache if not force_refresh
+        if not force_refresh and rs.ai_guidance:
+            try:
+                cached_data = json.loads(rs.ai_guidance)
+                ai_guidance = AIGuidance(**cached_data)
+                logger.info("Retrieved AI guidance from DB cache for cow %s", rs.cow_id)
+            except Exception:
+                ai_guidance = None
 
-def _rs_to_response(rs: RiskScore) -> RiskResponse:
-    factors = [RiskFactor(**f) for f in json.loads(rs.factors or "[]")]
-    rec_map = {
-        "no_risk":  "Continue routine monitoring. No action required.",
-        "low":      "Monitor closely. Check milk quality and activity daily for the next week.",
-        "moderate": "Perform a manual CMT test on all quarters and consult your veterinarian soon.",
-        "high":     "Isolate the cow immediately and contact a veterinarian within 24 hours.",
-    }
+        # 2. If not found or forced, generate via Groq LLM (which has memory TTL cache)
+        if ai_guidance is None:
+            ai_guidance = generate_farmer_guidance(
+                cow, rs.score, rs.category, factors, lang=lang, force_refresh=force_refresh
+            )
+            # 3. Persist back to DB so subsequent requests are instant
+            if session and ai_guidance:
+                try:
+                    rs.ai_guidance = ai_guidance.model_dump_json()
+                    session.add(rs)
+                    session.commit()
+                    logger.info("Cached fresh AI guidance into DB for cow %s", rs.cow_id)
+                except Exception as e:
+                    logger.warning("Failed to persist ai_guidance into DB: %s", e)
+
     return RiskResponse(
         cow_id=rs.cow_id,
         scored_at=rs.scored_at,
@@ -73,6 +95,21 @@ def _rs_to_response(rs: RiskScore) -> RiskResponse:
         engine_version=rs.engine_version,
         window_days=rs.window_days,
         recommendation=rec_map.get(rs.category, ""),
+        ai_guidance=ai_guidance,
+    )
+
+
+def _to_response(
+    rs: RiskScore,
+    cow_id: uuid.UUID,
+    cow: Optional[Bovine] = None,
+    lang: str = "en",
+    include_ai: bool = True,
+    force_refresh: bool = False,
+    session: Optional[Session] = None,
+) -> RiskResponse:
+    return _rs_to_response(
+        rs, cow=cow, lang=lang, include_ai=include_ai, force_refresh=force_refresh, session=session
     )
 
 
