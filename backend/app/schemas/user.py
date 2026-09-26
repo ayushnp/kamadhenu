@@ -22,6 +22,8 @@ class UserCreate(SQLModel):
     photo_url: Optional[str] = None
     place: Optional[str] = None
     number_of_animals: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     @model_validator(mode="after")
     def at_least_one_contact(self) -> "UserCreate":

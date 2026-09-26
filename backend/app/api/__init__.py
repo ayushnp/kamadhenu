@@ -12,6 +12,7 @@ from app.api.risk import router as risk_router
 from app.api.vaccinations import router as vaccinations_router
 from app.api.alerts import router as alerts_router
 from app.api.inspections import router as inspections_router
+from app.api.heatmap import router as heatmap_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -25,3 +26,4 @@ api_router.include_router(sensors_router)
 api_router.include_router(risk_router)
 api_router.include_router(alerts_router)
 api_router.include_router(inspections_router)
+api_router.include_router(heatmap_router)

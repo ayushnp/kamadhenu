@@ -96,6 +96,8 @@ export interface RegisterPayload {
   email?: string | null;
   place?: string | null;
   number_of_animals?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface StaffCreate {
@@ -107,6 +109,8 @@ export interface StaffCreate {
   employee_id?: string | null;
   department?: string | null;
   jurisdiction?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 /* ── Complaints ───────────────────────────────────────────────────────────── */
@@ -389,4 +393,27 @@ export interface FarmInspectionCreate {
   recommendations?: string | null;
   follow_up_required?: boolean;
   follow_up_date?: string | null;
+}
+
+/* ── GIS Heatmap ─────────────────────────────────────────────────────────── */
+
+export type HeatmapKind = 'risk' | 'complaint' | 'outbreak';
+
+export interface HeatmapPoint {
+  lat: number;
+  lng: number;
+  /** Normalised intensity 0.0 (safe) – 1.0 (critical). */
+  weight: number;
+  label: string;
+  kind: HeatmapKind;
+  severity: string; // 'no_risk' | 'low' | 'moderate' | 'high' | 'warning' | 'critical'
+}
+
+export interface HeatmapData {
+  points: HeatmapPoint[];
+  center_lat: number;
+  center_lng: number;
+  bounds_radius_km: number;
+  total_risk_points: number;
+  total_complaint_points: number;
 }

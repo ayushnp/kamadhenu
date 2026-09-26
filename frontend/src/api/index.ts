@@ -150,6 +150,13 @@ export const inspections = {
     request<UserPublic[]>('/inspections/farmers'),
 };
 
+/* ── GIS Heatmap ─────────────────────────────────────────────────────────── */
+export const heatmap = {
+  /** Risk + complaint geo-points for authority map view. */
+  riskPoints: (params?: { days?: number; include_complaints?: boolean; min_weight?: number }) =>
+    request<import('./types').HeatmapData>('/heatmap/risk-points', { query: params }),
+};
+
 export * from './types';
 export { ApiError, API_URL } from './client';
 

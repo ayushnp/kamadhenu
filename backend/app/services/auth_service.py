@@ -22,6 +22,8 @@ def register_farmer(payload: UserCreate, session: Session) -> User:
         photo_url=payload.photo_url,
         place=payload.place,
         number_of_animals=payload.number_of_animals,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
     )
     session.add(user)
     session.commit()

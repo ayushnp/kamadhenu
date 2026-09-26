@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Banner, Button, Caption, Field, Screen, Segmented, Title } from '../../src/components/ui';
 import { cows as cowsApi, ApiError } from '../../src/api';
+import type { CowCreate } from '../../src/api/types';
 import { useTranslation } from '../../src/i18n';
-import { colors, font, size, space } from '../../src/theme';
+import { getAutoLocation, Coordinates } from '../../src/lib/location';
+import { colors, font, radius, size, space } from '../../src/theme';
 
 const blank = {
   name: '', tag_number: '', pashu_aadhar: '', barcode: '', breed: '',
@@ -18,6 +20,8 @@ export default function CowForm() {
   const { t } = useTranslation();
   const [species, setSpecies] = useState<'cattle' | 'buffalo'>('cattle');
   const [f, setF] = useState(blank);
+  const [coords, setCoords] = useState<Coordinates | null>(null);
+  const [locating, setLocating] = useState(!editId);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -25,17 +29,38 @@ export default function CowForm() {
   const set = (k: keyof typeof blank) => (v: string) => setF((s) => ({ ...s, [k]: v }));
 
   useEffect(() => {
-    if (!editId) return;
-    cowsApi.detail(editId).then((c) => {
-      setSpecies(c.species === 'buffalo' ? 'buffalo' : 'cattle');
-      setF({
-        name: c.name ?? '', tag_number: c.tag_number ?? '', pashu_aadhar: c.pashu_aadhar ?? '',
-        barcode: c.barcode ?? '', breed: c.breed ?? '',
-        age_years: c.age_years != null ? String(c.age_years) : '',
-        calf_number: c.calf_number != null ? String(c.calf_number) : '',
-        lactation_number: c.lactation_number != null ? String(c.lactation_number) : '',
-      });
-    }).catch(() => setError('Could not load this animal for editing.'));
+    let isMounted = true;
+    if (!editId) {
+      // Auto-fetch device GPS location when adding new cattle
+      (async () => {
+        try {
+          const loc = await getAutoLocation();
+          if (isMounted && loc) {
+            setCoords(loc);
+          }
+        } finally {
+          if (isMounted) setLocating(false);
+        }
+      })();
+    } else {
+      cowsApi.detail(editId).then((c) => {
+        if (!isMounted) return;
+        setSpecies(c.species === 'buffalo' ? 'buffalo' : 'cattle');
+        setF({
+          name: c.name ?? '', tag_number: c.tag_number ?? '', pashu_aadhar: c.pashu_aadhar ?? '',
+          barcode: c.barcode ?? '', breed: c.breed ?? '',
+          age_years: c.age_years != null ? String(c.age_years) : '',
+          calf_number: c.calf_number != null ? String(c.calf_number) : '',
+          lactation_number: c.lactation_number != null ? String(c.lactation_number) : '',
+        });
+        if (c.latitude != null && c.longitude != null) {
+          setCoords({ latitude: c.latitude, longitude: c.longitude });
+        }
+      }).catch(() => setError('Could not load this animal for editing.'));
+    }
+    return () => {
+      isMounted = false;
+    };
   }, [editId]);
 
   const num = (s: string) => (s.trim() === '' ? null : Number(s));
@@ -48,7 +73,13 @@ export default function CowForm() {
       return setError('Pashu Aadhar is a 12-digit number.');
     }
 
-    const payload = {
+    // If still acquiring GPS on fresh animal registration, give 1.5s window
+    let finalCoords = coords;
+    if (!editing && !finalCoords && locating) {
+      finalCoords = await getAutoLocation(1500);
+    }
+
+    const payload: CowCreate = {
       name: f.name.trim() || null,
       tag_number: f.tag_number.trim() || null,
       pashu_aadhar: f.pashu_aadhar.trim() || null,
@@ -58,6 +89,8 @@ export default function CowForm() {
       age_years: num(f.age_years),
       calf_number: num(f.calf_number),
       lactation_number: num(f.lactation_number),
+      latitude: finalCoords?.latitude ?? null,
+      longitude: finalCoords?.longitude ?? null,
     };
 
     setBusy(true);
@@ -121,8 +154,7 @@ export default function CowForm() {
           value={f.pashu_aadhar}
           onChangeText={set('pashu_aadhar')}
           keyboardType="number-pad"
-          maxLength={12}
-          placeholder={t('cowForm.pashuAadharPlaceholder')}
+          placeholder="12-digit UID"
           hint={t('cowForm.pashuAadharHint')}
         />
         <Field
@@ -160,6 +192,50 @@ export default function CowForm() {
           placeholder="2"
           hint={t('cowForm.lactationHint')}
         />
+
+        {/* Automatic Animal GPS Location Tag */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: coords ? '#f0fdf4' : '#f8fafc',
+            borderColor: coords ? '#bbf7d0' : colors.line,
+            borderWidth: 1,
+            borderRadius: radius.md,
+            padding: space.sm,
+            paddingHorizontal: space.md,
+            marginTop: space.xs,
+            marginBottom: space.lg,
+          }}
+        >
+          {locating ? (
+            <>
+              <ActivityIndicator size="small" color={colors.pasture} style={{ marginRight: 8 }} />
+              <Text style={{ fontFamily: font.bodyMid, fontSize: size.xs, color: colors.muted, flex: 1 }}>
+                Detecting current GPS coordinates for animal...
+              </Text>
+            </>
+          ) : coords ? (
+            <>
+              <Feather name="map-pin" size={15} color={colors.pasture} style={{ marginRight: 8 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: font.bodySemi, fontSize: size.xs, color: colors.pasture }}>
+                  GPS Location locked ({coords.latitude.toFixed(4)}°, {coords.longitude.toFixed(4)}°)
+                </Text>
+                <Text style={{ fontFamily: font.body, fontSize: 11, color: colors.muted, marginTop: 1 }}>
+                  Automatic location attached to this animal.
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <Feather name="map-pin" size={15} color={colors.muted} style={{ marginRight: 8 }} />
+              <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.muted, flex: 1 }}>
+                Device GPS unavailable · Will automatically use your farm's registered location
+              </Text>
+            </>
+          )}
+        </View>
 
         <Button
           label={editing ? t('cowForm.submitSave') : t('cowForm.submitAdd')}

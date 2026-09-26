@@ -335,6 +335,54 @@ export default function AuthorityHome({
             </Card>
           )}
 
+          {/* ── GIS Risk Heatmap CTA ───────────────────────────────────── */}
+          <Pressable
+            onPress={() => router.push("/heatmap" as any)}
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+          >
+            <Card style={{ marginBottom: space.lg, overflow: "hidden", padding: 0 }}>
+              {/* Gradient-style header strip */}
+              <View style={{
+                backgroundColor: colors.pasture, paddingHorizontal: space.lg, paddingVertical: space.md,
+                flexDirection: "row", alignItems: "center", gap: space.sm,
+              }}>
+                <Feather name="map" size={18} color={colors.milk} />
+                <Text style={{ fontFamily: font.display, fontSize: size.md, color: colors.milk, flex: 1 }}>
+                  GIS Risk Heatmap
+                </Text>
+                <View style={{
+                  backgroundColor: colors.milk + '30', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill,
+                }}>
+                  <Text style={{ fontFamily: font.bodySemi, fontSize: 10, color: colors.milk }}>LIVE</Text>
+                </View>
+              </View>
+              {/* Body */}
+              <View style={{ padding: space.lg }}>
+                <Text style={{ fontFamily: font.body, fontSize: size.sm, color: colors.bark, lineHeight: 20, marginBottom: space.md }}>
+                  View a real-time geographic heat overlay of mastitis risk scores and complaint GPS points across your entire district.
+                </Text>
+                <View style={{ flexDirection: "row", gap: space.sm }}>
+                  {[
+                    { icon: "thermometer", label: "Risk zones" },
+                    { icon: "alert-circle", label: "Complaints" },
+                    { icon: "layers", label: "Layer toggle" },
+                  ].map((f) => (
+                    <View key={f.label} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Feather name={f.icon as any} size={12} color={colors.pasture} />
+                      <Text style={{ fontFamily: font.body, fontSize: size.xs, color: colors.bark }}>{f.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <View style={{ paddingHorizontal: space.lg, paddingBottom: space.md, alignItems: "flex-end" }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={{ fontFamily: font.bodySemi, fontSize: size.sm, color: colors.pasture, marginRight: 4 }}>Open map</Text>
+                  <Feather name="arrow-right" size={14} color={colors.pasture} />
+                </View>
+              </View>
+            </Card>
+          </Pressable>
+
           {/* Staff workload */}
           {staffWithCases.length > 0 && (
             <Card style={{ marginBottom: space.lg }}>

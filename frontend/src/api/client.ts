@@ -1,7 +1,11 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8000').replace(/\/$/, '');
+export const API_URL = (
+  Platform.OS === 'web'
+    ? (process.env.EXPO_PUBLIC_WEB_API_URL ?? 'http://localhost:8000')
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8000')
+).replace(/\/$/, '');
 const BASE = `${API_URL}/api/v1`;
 const TOKEN_KEY = 'kamadhenu.token';
 

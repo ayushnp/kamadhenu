@@ -20,7 +20,11 @@ from app.schemas.vaccination import VaccinationCreate, VaccinationRead
 
 def create_bovine(payload: BovineCreate, farmer: User, session: Session) -> Bovine:
     _assert_unique_identifiers(payload.pashu_aadhar, payload.barcode, session)
-    bovine = Bovine(**payload.model_dump(), farmer_id=farmer.id)
+    data = payload.model_dump()
+    if data.get("latitude") is None and farmer.latitude is not None:
+        data["latitude"] = farmer.latitude
+        data["longitude"] = farmer.longitude
+    bovine = Bovine(**data, farmer_id=farmer.id)
     session.add(bovine)
     session.commit()
     session.refresh(bovine)

@@ -2,10 +2,13 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTranslation } from '../../src/i18n';
+import { useAuth } from '../../src/lib/auth';
 import { colors, font, size } from '../../src/theme';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isAuthority = user?.role === 'authority';
 
   return (
     <Tabs
@@ -30,9 +33,18 @@ export default function TabsLayout() {
         options={{ title: t('tabs.lookup'), tabBarIcon: ({ color, size: s }) => <Feather name="search" size={s} color={color} /> }}
       />
       <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map',
+          href: isAuthority ? '/map' : null,
+          tabBarIcon: ({ color, size: s }) => <Feather name="map" size={s} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: t('tabs.profile'), tabBarIcon: ({ color, size: s }) => <Feather name="user" size={s} color={color} /> }}
       />
     </Tabs>
   );
 }
+
